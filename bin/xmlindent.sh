@@ -3,7 +3,6 @@
 CAT_BIN=`which cat`
 RM_BIN=`which rm`
 MV_BIN=`which mv`
-ECHO_BIN=`which echo`
 XSLTPROC_BIN=`which xsltproc`
 test -e $XSLTPROC_BIN || (echo "Cannot find xsltproc"; exit 1)
 
@@ -21,9 +20,13 @@ EOF
 
 for FILE in "$@"; do
 	TMPFILE=`mktemp`
-	$ECHO_BIN "Indent $FILE (backup: $TMPFILE)"
+	echo "Indent $FILE (backup: $TMPFILE)"
 	$MV_BIN "$FILE" "$TMPFILE"
-	$XSLTPROC_BIN "$XSL_FILE" "$TMPFILE" > "$FILE"
+	$XSLTPROC_BIN "$XSL_FILE" "$TMPFILE" > "$FILE" 2> /dev/null
+	if [ ! $? -eq 0 ]; then
+		echo "   Error with XSLTPROC, revert changes on file: $FILE"
+		$MV_BIN "$TMPFILE" "$FILE"
+	fi
 done
 
 $RM_BIN -f "$XSL_FILE"
