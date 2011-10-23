@@ -1,11 +1,25 @@
 #!/bin/bash
 
+
+## Options
+SHOW_FULLPATH="false"
+
+
 # Common
 BASENAME_BIN=`which basename`
 FIND_BIN="`which find` -mindepth 1 -maxdepth 1"
 GREP_BIN=`which grep`
 CAT_BIN=`which cat`
 AWK_BIN=`which awk`
+
+## Functions
+__expandPath () {
+	PATTERN=$1
+	FILES=`eval echo $PATTERN`
+	for FILE in $FILES; do 
+		test -f "$FILE" && echo "$FILE"
+	done
+}
 
 ## Retrieve CONF
 if [ -z "$APP_HOME" -o ! -d "$APP_HOME" ]; then
@@ -28,10 +42,10 @@ fi
 
 ## Main
 $GREP_BIN -v "^#" "$APP_CONF" | while read LINE; do
-	if [ -n "$LINE" ]; then
-		FILES=`echo $LINE`
-		if [ ! "$FILES" = "$LINE" ]; then
-			echo "$FILES" | $AWK_BIN '{print $NF}'
-		fi
+	LAST=`__expandPath "$LINE" | tail -1`
+	if [ "$SHOW_FULLPATH" = "true" ]; then
+		echo "$LAST"
+	else
+		basename "$LAST"
 	fi
 done
