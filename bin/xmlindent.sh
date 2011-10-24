@@ -1,12 +1,12 @@
 #!/bin/bash
 
-CAT_BIN=`which cat`
-RM_BIN=`which rm`
-MV_BIN=`which mv`
-XSLTPROC_BIN=`which xsltproc`
-test -e $XSLTPROC_BIN || (echo "Cannot find xsltproc"; exit 1)
+CAT_BIN=`which cat` || exit 1
+RM_BIN=`which rm` || exit 1
+MV_BIN=`which mv` || exit 1
+MKTEMP_BIN=`which mktemp` || exit 1
+XSLTPROC_BIN=`which xsltproc` || exit 1
 
-XSL_FILE=`mktemp`
+XSL_FILE=`$MKTEMP_BIN` || exit 2
 $CAT_BIN << EOF > $XSL_FILE
 <?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -19,7 +19,7 @@ $CAT_BIN << EOF > $XSL_FILE
 EOF
 
 for FILE in "$@"; do
-	TMPFILE=`mktemp`
+	TMPFILE=`$MKTEMP_BIN` || exit 3
 	echo "Indent $FILE (backup: $TMPFILE)"
 	$MV_BIN "$FILE" "$TMPFILE"
 	$XSLTPROC_BIN "$XSL_FILE" "$TMPFILE" > "$FILE" 2> /dev/null
