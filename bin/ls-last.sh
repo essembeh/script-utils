@@ -6,11 +6,10 @@ SHOW_FULLPATH="false"
 
 
 # Common
-BASENAME_BIN=`which basename`
-FIND_BIN="`which find` -mindepth 1 -maxdepth 1"
-GREP_BIN=`which grep`
-CAT_BIN=`which cat`
-AWK_BIN=`which awk`
+BASENAME_BIN=`which basename` || exit 1
+FIND_BIN="`which find` -mindepth 1 -maxdepth 1" || exit 1
+GREP_BIN=`which grep` || exit 1
+CAT_BIN=`which cat` || exit 1
 
 ## Functions
 __expandPath () {

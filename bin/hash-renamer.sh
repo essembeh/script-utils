@@ -1,10 +1,12 @@
 #!/bin/bash
 
-AWK_BIN=`which awk`
-DIRNAME_BIN=`which dirname`
-BASENAME_BIN=`which basename`
-MV_BIN=`which mv`
-HASH_BIN=`which md5sum`
+AWK_BIN=`which awk` || exit 1
+DIRNAME_BIN=`which dirname` || exit 1
+BASENAME_BIN=`which basename` || exit 1
+MV_BIN=`which mv` || exit 1
+HASH_BIN=`which md5sum` || exit 1
+
+
 if [ "$1" = "-h" -o "$1" = "--hash" ]; then
 	shift
 	HASH_BIN="$1"

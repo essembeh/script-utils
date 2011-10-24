@@ -1,11 +1,11 @@
 #!/bin/sh
 
 BIN=$0
-GREP_BIN="`which grep` -E"
-SED_BIN=`which sed`
-MV_BIN=`which mv`
-CP_BIN=`which cp`
-FIND_BIN=`which find`
+GREP_BIN="`which grep` -E" || exit 1
+SED_BIN=`which sed` || exit 1
+MV_BIN=`which mv` || exit 1
+CP_BIN=`which cp` || exit 1
+FIND_BIN=`which find` || exit 1
 
 MODE="REPLACE"
 PATTERN_TAG1="{[^}]*}"
