@@ -6,6 +6,11 @@ SED_BIN=`which sed` || exit 1
 MV_BIN=`which mv` || exit 1
 CP_BIN=`which cp` || exit 1
 FIND_BIN=`which find` || exit 1
+## MacOS
+#MKTEMP_BIN="`which mktemp` -t plop"
+## GNU/Linux
+MKTEMP_BIN=`which mktemp`
+
 
 MODE="REPLACE"
 PATTERN_TAG1="{[^}]*}"
@@ -13,7 +18,7 @@ PATTERN_TAG2="<[^>]*>"
 
 __removeTagsFromFile () {
 	FILE="$1"
-	TMPFILE="`mktemp -t notag`"
+	TMPFILE="`$MKTEMP_BIN`"
 	case "$MODE" in 
 		"DRYRUN") 
 			echo ""
