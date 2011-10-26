@@ -3,12 +3,12 @@
 ##
 ## Binaries
 ##
-GREP_BIN="`which grep` -E" || exit 1
+GREP_BIN=`which egrep` || exit 1
 SED_BIN=`which sed` || exit 1
 MV_BIN=`which mv` || exit 1
 CP_BIN=`which cp` || exit 1
 FIND_BIN=`which find` || exit 1
-MKTEMP_BIN=`which mktemp`
+MKTEMP_BIN=`which mktemp` || exit 1
 
 ##
 ## Constants
