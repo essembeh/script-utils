@@ -1,23 +1,20 @@
 #!/bin/bash
 
-## Linux
-MKTEMP=`which mktemp` || exit 1
+## Binaries
+MKTEMP_BIN=`which mktemp` || exit 1
+AWK_BIN=`which awk` || exit 1
+SED_BIN=`which sed` || exit 1
+GREP_BIN=`which egrep` || exit 1
+WGET_BIN=`which wget` || exit 1
+BASENAME_BIN=`which basename`|| exit 1
+DIRNAME_BIN=`which dirname`|| exit 1
+UNZIP_BIN=`which unzip` || exit 1
+CP_BIN="`which cp` -vi" || exit 1
 
-## MacOS
-#MKTEMP="`which mktemp` -t plop" || exit 1
-
-## Commont
-AWK=`which awk` || exit 1
-SED=`which sed` || exit 1
-GREP=`which egrep` || exit 1
-WGET=`which wget` || exit 1
-BASENAME=`which basename`|| exit 1
-DIRNAME=`which dirname`|| exit 1
-UNZIP=`which unzip`
-CP="cp -vi"
-
+## CONSTANTS
 STEU_URL="http://www.sous-titres.eu/series"
 STEU_DISCRIM='class="subList"'
+VERBOSE=""
 
 ##
 ## Prints log
@@ -30,38 +27,38 @@ __log () {
 ## Get the serie identifier on soust-titres.eu
 ##
 __getSerieIdentifier () {
-	$BASENAME "$1" | $AWK '{print tolower($0)}' | $SED -r -e "s/[\. ]/_/g"
+	$BASENAME_BIN "$1" | $AWK_BIN '{print tolower($0)}' | $SED_BIN -r -e "s/[\. ]/_/g"
 }
 
 ##
 ## Get the serie URL on STEU
 ##
 __getSerieHomepage () {
-	SERIE_IDENTIFIER=`__getSerieIdentifier "$1"`
-	SERIE_URL="$STEU_URL/$SERIE_IDENTIFIER.html"
-	echo "$SERIE_URL"
+	serieID=`__getSerieIdentifier "$1"`
+	serieURL="$STEU_URL/$serieID.html"
+	echo "$serieURL"
 }
 
 ##
 ## Get the serie from filename
 ##
 __getEpisodeNumber () {
-	$BASENAME "$1" | $SED -e "s@^.*[\. ][sS]\([0-9]\+\)[eE]\([0-9]\+\).*@\1x\2@" -e "s/^0\+//"
+	$BASENAME_BIN "$1" | $SED_BIN -e "s@^.*[\. ][sS]\([0-9]\+\)[eE]\([0-9]\+\).*@\1x\2@" -e "s/^0\+//"
 }
 ##
 ## Get the serie from filename
 ##
 __getSerieNameFromFile () {
-	$BASENAME "$1" | $SED "s@^\(.*\)[\. ][sS][0-9]\+[eE][0-9]\+.*@\1@"
+	$BASENAME_BIN "$1" | $SED_BIN "s@^\(.*\)[\. ][sS][0-9]\+[eE][0-9]\+.*@\1@"
 }
 
 ##
 ## Get Zip URL
 ##
 __getZipUrls () {
-	HTML_FILE=`$MKTEMP`
-	if $WGET "$1" -qO $HTML_FILE; then
-		$GREP $STEU_DISCRIM $HTML_FILE | $SED 's/^.*href="\(.*\.zip\)".*$/\1/' | $GREP "$2"
+	htmlFile=`$MKTEMP_BIN`
+	if $WGET_BIN "$1" -qO $htmlFile; then
+		$GREP_BIN $STEU_DISCRIM $htmlFile | $SED_BIN 's/^.*href="\(.*\.zip\)".*$/\1/' | $GREP_BIN "$2"
 	else
 		return 1
 	fi
@@ -71,11 +68,11 @@ __getZipUrls () {
 ## Download SRT and prints paths
 ##
 __getSrtFromUrl () {
-	ZIP_FILE=`$MKTEMP`
-	if $WGET "$1" -qO "$ZIP_FILE"; then
-		TMPDIR=`$MKTEMP -d`
-		if $UNZIP -qd $TMPDIR $ZIP_FILE; then
-			find $TMPDIR -name "*.srt" | sort
+	tmpZipFile=`$MKTEMP_BIN`
+	if $WGET_BIN "$1" -qO "$tmpZipFile"; then
+		tmpFolder=`$MKTEMP_BIN -d`
+		if $UNZIP_BIN -qd $tmpFolder $tmpZipFile; then
+			find $tmpFolder -name "*.srt" | sort
 		else
 			return 2
 		fi
@@ -92,20 +89,20 @@ __fileSelection () {
 		return 1
 	fi
 	if [ $# -eq 1 ]; then
-		SELECTED_FILE="$1"
+		returnedFile="$1"
 	else
-		I=1
-		for FILE in $@; do 
-			FILE_BASENAME=`$BASENAME "$FILE"`
-			echo "[$I] $FILE_BASENAME"
-			I=`expr $I + 1`
+		i=1
+		for currentFile in $@; do 
+			fileBasename=`$BASENAME_BIN "$currentFile"`
+			echo "[$i] $fileBasename"
+			i=`expr $i + 1`
 		done
-		ANS=0
-		while [ $ANS -lt 1 -o $ANS -ge $I ]; do
-			echo "Enter a file ? [1-`expr $I - 1`]"
-			read ANS
+		answer=0
+		while [ $answer -lt 1 -o $answer -ge $i ]; do
+			echo "Enter a file ? [1-`expr $i - 1`]"
+			read answer
 		done
-		SELECTED_FILE=$(eval echo $\{`echo $ANS`\})
+		returnedFile=$(eval echo $\{`echo $answer`\})
 	fi
 }
 
@@ -113,47 +110,47 @@ __fileSelection () {
 ## Guess the SRT Name
 ##
 __computeSrtFilename () {
-	SRT_FILE=`echo "$1" | $SED -e "s/[[:alnum:]]\+$//" -e "s/$/srt/"`
-	echo "$SRT_FILE"
-	test -f "$SRT_FILE" && return 1
+	srtFile=`echo "$1" | $SED_BIN -e "s/[[:alnum:]]\+$//" -e "s/$/srt/"`
+	echo "$srtFile"
+	test -f "$srtFile" && return 1
 }
 
+## 
+## Main 
+##
 __main () {
-	for EPISODE in "$@"; do 
-		EPISODE_NAME=`$BASENAME "$EPISODE"`
-		EPISODE_FOLDER=`$DIRNAME "$EPISODE"`
-		echo "Find SRT for File: $EPISODE_NAME"
-		SERIE_NAME=`__getSerieNameFromFile "$EPISODE_NAME"`
-		__log "Serie name: $SERIE_NAME"
-		SERIE_IDENTIFIER=`__getSerieIdentifier "$SERIE_NAME"`
-		__log "Serie identifier: $SERIE_IDENTIFIER"
-		EPISODE_NUMBER=`__getEpisodeNumber "$EPISODE_NAME"`
-		__log "Episode number: $EPISODE_NUMBER"
-		TARGET_SRT=`__computeSrtFilename "$EPISODE"`
-		__log "SRT target: $TARGET_SRT"
-		SERIE_HOMEPAGE=`__getSerieHomepage "$SERIE_IDENTIFIER"` 
-		__log "Serie homepage: $SERIE_HOMEPAGE"
-		ZIP_FILES=`__getZipUrls "$SERIE_HOMEPAGE" "$EPISODE_NUMBER"`
+	for currentEpisode in "$@"; do 
+		episodeName=`$BASENAME_BIN "$currentEpisode"`
+		echo "Find SRT for File: $episodeName"
+		targetSrtFile=`__computeSrtFilename "$currentEpisode"`
+		__log "SRT target: $targetSrtFile"
+		serieName=`__getSerieNameFromFile "$episodeName"`
+		__log "Serie name: $serieName"
+		serieHomepage=`__getSerieHomepage "$serieName"` 
+		__log "Serie homepage: $serieHomepage"
+		episodeNumber=`__getEpisodeNumber "$episodeName"`
+		__log "Episode number: $episodeNumber"
+		listOfZipFiles=`__getZipUrls "$serieHomepage" "$episodeNumber"`
 		if [ ! $? -eq 0 ]; then
-			echo "*** Error getting subtitles for episode: $EPISODE_NUMBER, on page: $SERIE_HOMEPAGE"
+			echo "*** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
 			break
 		fi
-		__fileSelection $ZIP_FILES
+		__fileSelection $listOfZipFiles
 		if [ ! $? -eq 0 ]; then
-			echo "*** Error getting subtitles for episode: $EPISODE_NUMBER, on page: $SERIE_HOMEPAGE"
+			echo "*** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
 			break
 		fi
-		ZIP_FILE="$SELECTED_FILE"
-		__log "Selected ZIP file: $ZIP_FILE"
-		SRT_FILES=`__getSrtFromUrl "$STEU_URL/$SELECTED_FILE"`
-		__fileSelection $SRT_FILES
+		zipFile="$returnedFile"
+		__log "Selected ZIP file: $zipFile"
+		listOfSrtFiles=`__getSrtFromUrl "$STEU_URL/$returnedFile"`
+		__fileSelection $listOfSrtFiles
 		if [ ! $? -eq 0 ]; then
-			echo "*** Error downloading ZIP: $ZIP_FILE"
+			echo "*** Error downloading ZIP: $zipFile"
 			break
 		fi
-		SRT_FILE="$SELECTED_FILE"
-		__log "SRT file: $SRT_FILE"
-		$CP "$SRT_FILE" "$TARGET_SRT"
+		srtFile="$returnedFile"
+		__log "SRT file: $srtFile"
+		$CP_BIN "$srtFile" "$targetSrtFile"
 	done
 }
 

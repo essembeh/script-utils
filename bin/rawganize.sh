@@ -20,93 +20,90 @@ __dryrun () {
 }
 
 __removeFile () {
-	for FILE in "$@"; do
+	for currentFile in "$@"; do
 		if [ "$SECURE_DELETE" = "true" ]; then
-			echo "$INDENT2 rm -i $FILE"
+			echo "$INDENT2 rm -i $currentFile"
 			__dryrun && mkdir -p "$TRASH_FOLDER" > /dev/null 2>&1
-			__dryrun && mv "$FILE" "$TRASH_FOLDER/"
+			__dryrun && mv "$currentFile" "$TRASH_FOLDER/"
 		else
-			echo "$INDENT2 rm $FILE"
-			__dryrun && rm -f "$FILE"
+			echo "$INDENT2 rm $currentFile"
+			__dryrun && rm -f "$currentFile"
 		fi
 	done
 }
 
 __findFilesByExtensions () {
-	FOLDER="$1"; shift
-	ALL_PATTERNS="$@"
-	for CURRENT_PATTERN in $ALL_PATTERNS; do
-		find "$FOLDER" -type f -mindepth 1 -maxdepth 1 -iname *.$CURRENT_PATTERN 2> /dev/null
+	folder="$1"; shift
+	listOfExtensions="$@"
+	for currentExtension in $listOfExtensions; do
+		find "$folder" -type f -mindepth 1 -maxdepth 1 -iname *.$currentExtension 2> /dev/null
 	done
 }
 
 __countFilesInDir ()  {
-	FOLDER="$1"; shift
-	EXTENSIONS="$@"
-	TOTAL_COUNT=`__findFilesByExtensions "$FOLDER" "$EXTENSIONS" | wc -l`
-	return $TOTAL_COUNT
+	folder="$1"; shift
+	listOfExtensions="$@"
+	count=`__findFilesByExtensions "$folder" "$listOfExtensions" | wc -l`
+	return $count
 }
 
 __findCorrespondingRaw () {
-	JPG_FILE="$1"
-	RAW_FOLDER="$2"
-	JPG_BASENAME=$(basename "$JPG_FILE")
-	for RAW_EXTENSION in $EXTENSIONS_RAW; do 
-		RAW_BASENAME=$(echo "$JPG_BASENAME" | sed -E "s/\.[[:alnum:]]+$/.$RAW_EXTENSION/")
-		RAW_FILE="$RAW_FOLDER/$RAW_BASENAME"
-		test -f "$RAW_FILE" && return 0
+	jpgFile="$1"
+	rawFolder="$2"
+	jpgBasename=$(basename "$jpgFile")
+	for currentRawExtension in $EXTENSIONS_RAW; do 
+		rawBasename=$(echo "$jpgBasename" | sed -r "s/\.[[:alnum:]]+$/.$currentRawExtension/")
+		rawFile="$rawFolder/$rawBasename"
+		test -f "$rawFile" && return 0
 	done
 	return 1
 }
 
 __isPhotoFolder () {
-	FOLDER="$1"
-	test -d "$FOLDER" || return 1
-	__countFilesInDir "$FOLDER" "$EXTENSIONS_JPG" "$EXTENSIONS_RAW" && return 2
+	folder="$1"
+	test -d "$folder" || return 1
+	__countFilesInDir "$folder" "$EXTENSIONS_JPG" "$EXTENSIONS_RAW" && return 2
 	return 0
 } 
 
-	
-	
 __moveJpgToSubfolder () {
-	SOURCE_FOLDER="$1"
-	DESTINATION_FOLDER="$2"
-	__findFilesByExtensions "$SOURCE_FOLDER" "$EXTENSIONS_JPG" | while read CURRENT_JPG; do
-		if __findCorrespondingRaw "$CURRENT_JPG" "$SOURCE_FOLDER"; then
-			echo "$INDENT2 mv $CURRENT_JPG"
-			__dryrun && mkdir -p "$DESTINATION_FOLDER"
-			__dryrun && mv "$CURRENT_JPG" "$DESTINATION_FOLDER"
+	sourceFolder="$1"
+	destinationFolder="$2"
+	__findFilesByExtensions "$sourceFolder" "$EXTENSIONS_JPG" | while read currentJpgFile; do
+		if __findCorrespondingRaw "$currentJpgFile" "$sourceFolder"; then
+			echo "$INDENT2 mv $currentJpgFile"
+			__dryrun && mkdir -p "$destinationFolder"
+			__dryrun && mv "$currentJpgFile" "$destinationFolder"
 		fi
 	done
 }
 
 __moveClipsToSubfolder () {
-	SOURCE_FOLDER="$1"
-	DESTINATION_FOLDER="$2"
-	__findFilesByExtensions "$SOURCE_FOLDER" "$EXTENSIONS_VID" | while read CURRENT_VID; do
-		echo "$INDENT2 mv $CURRENT_VID"
-		__dryrun && mkdir -p "$DESTINATION_FOLDER"
-		__dryrun && mv "$CURRENT_VID" "$DESTINATION_FOLDER"
+	sourceFolder="$1"
+	destinationFolder="$2"
+	__findFilesByExtensions "$sourceFolder" "$EXTENSIONS_VID" | while read currentClip; do
+		echo "$INDENT2 mv $currentClip"
+		__dryrun && mkdir -p "$destinationFolder"
+		__dryrun && mv "$currentClip" "$destinationFolder"
 	done
 }
 
 __syncRawAndJpg () {
-	RAW_FOLDER="$1"
-	JPG_FOLDER="$2"
-
+	rawFolder="$1"
+	jpgFolder="$2"
 	# check if directories exist
-	test -d "$RAW_FOLDER" || return 1
-	test -d "$JPG_FOLDER" || return 2
+	test -d "$rawFolder" || return 1
+	test -d "$jpgFolder" || return 2
 	# For each jpg, if the RAW does not exist, delete the jpg
-	__findFilesByExtensions "$JPG_FOLDER" "$EXTENSIONS_JPG" | while read JPG_FILE; do
-		__findCorrespondingRaw "$JPG_FILE" "$RAW_FOLDER" || __removeFile "$JPG_FILE"
+	__findFilesByExtensions "$jpgFolder" "$EXTENSIONS_JPG" | while read currentJpgFile; do
+		__findCorrespondingRaw "$jpgFolder" "$rawFolder" || __removeFile "$currentJpgFile"
 	done
 }
 
 __cleanFolder () {
-	RAW_FOLDER="$1"
-	__findFilesByExtensions "$RAW_FOLDER" "$EXTENSIONS_DELETE" | while read FILE; do
-		__removeFile "$FILE"
+	rawFolder="$1"
+	__findFilesByExtensions "$rawFolder" "$EXTENSIONS_DELETE" | while read currentFile; do
+		__removeFile "$currentFile"
 	done
 }
 
@@ -116,24 +113,24 @@ if [ "$1" = "--dry-run" ]; then
 	shift
 fi
 
-for FOLDER in "$@"; do
+for currentFolder in "$@"; do
 	# Check if folder is a photo folder
-	if __isPhotoFolder "$FOLDER"; then
-		echo "Processing folder: $FOLDER"
+	if __isPhotoFolder "$currentFolder"; then
+		echo "Processing folder: $currentFolder"
 		# if it contains RAW AND JPG, so make a subfolder for JPG
 		echo "$INDENT1 Sync RAW+JPG"
-		__moveJpgToSubfolder "$FOLDER" "$FOLDER/$SUBFOLDER_JPG"
-		__syncRawAndJpg "$FOLDER" "$FOLDER/$SUBFOLDER_JPG"
+		__moveJpgToSubfolder "$currentFolder" "$currentFolder/$SUBFOLDER_JPG"
+		__syncRawAndJpg "$currentFolder" "$currentFolder/$SUBFOLDER_JPG"
 
 		# if it contains clips, so make a subfolder for clips
 		echo "$INDENT1 Moving clips"
-		__moveClipsToSubfolder "$FOLDER" "$FOLDER/$SUBFOLDER_VID"
+		__moveClipsToSubfolder "$currentFolder" "$currentFolder/$SUBFOLDER_VID"
 
 		# clean
 		echo "$INDENT1 Clean"
-		__cleanFolder "$FOLDER"
+		__cleanFolder "$currentFolder"
 	else
-		echo "Error, Folder: $FOLDER, is not a photo folder"
+		echo "Error, Folder: $currentFolder, is not a photo folder"
 	fi
 	echo ""
 done

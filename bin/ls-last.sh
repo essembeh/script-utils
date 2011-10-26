@@ -1,50 +1,48 @@
 #!/bin/bash
 
-
 ## Options
 SHOW_FULLPATH="false"
-
 
 # Common
 BASENAME_BIN=`which basename` || exit 1
 FIND_BIN="`which find` -mindepth 1 -maxdepth 1" || exit 1
-GREP_BIN=`which grep` || exit 1
+GREP_BIN=`which egrep` || exit 1
 CAT_BIN=`which cat` || exit 1
+
 
 ## Functions
 __expandPath () {
-	PATTERN=$1
-	FILES=`eval echo $PATTERN`
-	for FILE in $FILES; do 
-		test -f "$FILE" && echo "$FILE"
+	pathToExpand=$1
+	listOfFiles=`eval echo $pathToExpand`
+	for currentFile in $listOfFiles; do 
+		test -f "$currentFile" && echo "$currentFile"
 	done
 }
 
-## Retrieve CONF
-if [ -z "$APP_HOME" -o ! -d "$APP_HOME" ]; then
-	APP_BIN="$0"
-	while [ -L "$APP_BIN" ]; do
-		LINK="$(readlink "$APP_BIN")"
-		if echo "$LINK" | $GREP_BIN -q "^/"; then
-			APP_BIN="$LINK"
-		else
-			APP_BIN="$(dirname "$APP_BIN")/$LINK"
-		fi  
-	done
-	APP_CONF="${APP_BIN%.sh}.conf"
-fi
 
-if [ ! -f "$APP_CONF" ]; then
-	echo "Cannot find configuration file: $APP_CONF"
+## Retrieve CONF
+appBinary="$0"
+while [ -L "$appBinary" ]; do
+	appLink="$(readlink "$appBinary")"
+	if echo "$appLink" | $GREP_BIN -q "^/"; then
+		appBinary="$appLink"
+	else
+		appBinary="$(dirname "$appBinary")/$appLink"
+	fi  
+done
+appConfigurationFile="${appBinary%.sh}.conf"
+
+if [ ! -f "$appConfigurationFile" ]; then
+	echo "Cannot find configuration file: $appConfigurationFile"
 	exit 1
 fi
 
 ## Main
-$GREP_BIN -v "^#" "$APP_CONF" | while read LINE; do
-	LAST=`__expandPath "$LINE" | tail -1`
+$GREP_BIN -v "^#" "$appConfigurationFile" | while read currentPath; do
+	lastFile=`__expandPath "$currentPath" | tail -1`
 	if [ "$SHOW_FULLPATH" = "true" ]; then
-		echo "$LAST"
+		echo "$lastFile"
 	else
-		basename "$LAST"
+		basename "$lastFile"
 	fi
 done

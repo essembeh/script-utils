@@ -1,71 +1,83 @@
 #!/bin/sh
 
-BIN=$0
+##
+## Binaries
+##
 GREP_BIN="`which grep` -E" || exit 1
 SED_BIN=`which sed` || exit 1
 MV_BIN=`which mv` || exit 1
 CP_BIN=`which cp` || exit 1
 FIND_BIN=`which find` || exit 1
-## MacOS
-#MKTEMP_BIN="`which mktemp` -t plop"
-## GNU/Linux
 MKTEMP_BIN=`which mktemp`
 
-
+##
+## Constants
+##
 MODE="REPLACE"
 PATTERN_TAG1="{[^}]*}"
 PATTERN_TAG2="<[^>]*>"
 
+##
+## Remove tags from file
+##
 __removeTagsFromFile () {
-	FILE="$1"
-	TMPFILE="`$MKTEMP_BIN`"
+	srtFile="$1"
+	tmpFile="`$MKTEMP_BIN`"
 	case "$MODE" in 
 		"DRYRUN") 
 			echo ""
 			return 1;;
 		"COPY") 
-			TARGET="$FILE.notag";;
+			targetFile="$srtFile.notag";;
 		"REPLACE")
-			TARGET="$FILE";;
+			targetFile="$srtFile";;
 	esac
-	$CP_BIN "$FILE" "$TMPFILE"
-	$SED_BIN -e "s/$PATTERN_TAG1//g" -e "s/$PATTERN_TAG2//g" < "$TMPFILE" > "$TARGET" 
-	echo " -> $TARGET"
+	$CP_BIN "$srtFile" "$tmpFile"
+	$SED_BIN -e "s/$PATTERN_TAG1//g" -e "s/$PATTERN_TAG2//g" < "$tmpFile" > "$targetFile" 
+	echo " -> $targetFile"
 }
 
+##
+## Test if file contains tags
+##
 __testFile () {
-	FILE="$1"
-	if [ -f "$FILE" ]; then
-		echo "$FILE" | $GREP_BIN -q "\.srt$"
+	srtFile="$1"
+	if [ -f "$srtFile" ]; then
+		echo "$srtFile" | $GREP_BIN -q "\.srt$"
 		if [ $? -eq 0 ]; then
-			$GREP_BIN -q -e "$PATTERN_TAG1" -e "$PATTERN_TAG2" <"$FILE"
+			$GREP_BIN -q -e "$PATTERN_TAG1" -e "$PATTERN_TAG2" <"$srtFile"
 			if [ $? -eq 0 ]; then
-				echo -n "+++ File contains tag: $FILE"
+				echo -n "+++ File contains tag: $srtFile"
 				return 0
 			else
-				echo    "--- File has no tag:   $FILE"
+				echo    "--- File has no tag:   $srtFile"
 				return 3
 			fi
 		else
-			echo "    Not a SRT file:    $FILE"
+			echo "    Not a SRT file:    $srtFile"
 			return 2
 		fi
 	else
-		echo "    Not a valid file:  $FILE"
+		echo "    Not a valid file:  $srtFile"
 		return 1
 	fi
 }
 
-
+##
+## Process a folder
+##
 __processFolder () {
-	FOLDER="$1"
-	echo "Processing folder: $FOLDER"
-	$FIND_BIN "$FOLDER" -type f -name "*.srt" | while read LINE; do 
-		__testFile "$LINE" && __removeTagsFromFile "$LINE"
+	folder="$1"
+	echo "Processing folder: $folder"
+	$FIND_BIN "$folder" -type f -name "*.srt" | while read currentFile; do 
+		__testFile "$currentFile" && __removeTagsFromFile "$currentFile"
 	done
 }
 
 
+##
+## Display usage
+##
 __usage () {
 	echo "Usage: "$(basename $0)" [OPTIONS] files dirs ..."
 	echo "Options:"
@@ -74,9 +86,11 @@ __usage () {
 	echo "  -h | --help: display help"
 }
 
+##
 ## Parse args
-ENDLOOP=false
-while [ "$ENDLOOP" = "false" ]; do
+##
+endOfLoop="false"
+while [ "$endOfLoop" = "false" ]; do
 	case "$1" in
 	"-c"|"--copy")
 		MODE="COPY"
@@ -91,16 +105,17 @@ while [ "$ENDLOOP" = "false" ]; do
 		__usage
 		exit 1 ;;
 	*)
-		ENDLOOP="true" ;;
+		endOfLoop="true" ;;
 	esac
 done
 
-
+##
 ## Main loop
-for FILE in "$@"; do 
-	if [ -d "$FILE" ]; then
-		__processFolder "$FILE"
+##
+for currentFile in "$@"; do 
+	if [ -d "$currentFile" ]; then
+		__processFolder "$currentFile"
 	else
-		__testFile "$FILE" && __removeTagsFromFile "$FILE"
+		__testFile "$currentFile" && __removeTagsFromFile "$currentFile"
 	fi
 done
