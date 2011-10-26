@@ -43,6 +43,6 @@ $GREP_BIN -v "^#" "$appConfigurationFile" | while read currentPath; do
 	if [ "$SHOW_FULLPATH" = "true" ]; then
 		echo "$lastFile"
 	else
-		basename "$lastFile"
+		$BASENAME_BIN "$lastFile"
 	fi
 done
