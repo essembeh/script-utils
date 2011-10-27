@@ -85,24 +85,25 @@ __getSrtFromUrl () {
 ## File selector
 ##
 __fileSelection () {
-	if [ $# -eq 0 ]; then
+	fileCount=`echo "$1" | wc -l`
+	__log "File count: $fileCount"
+	if [ $fileCount -eq 0 ]; then
 		return 1
-	fi
-	if [ $# -eq 1 ]; then
+	elif [ $fileCount -eq 1 ]; then
 		returnedFile="$1"
 	else
 		i=1
-		for currentFile in $@; do 
+		echo "$1" | while read currentFile; do 
 			fileBasename=`$BASENAME_BIN "$currentFile"`
 			echo "[$i] $fileBasename"
 			i=`expr $i + 1`
 		done
 		answer=0
-		while [ $answer -lt 1 -o $answer -ge $i ]; do
-			echo "Enter a file ? [1-`expr $i - 1`]"
+		while [ $answer -lt 1 -o $answer -ge $fileCount ]; do
+			echo "Enter a file ? [1-$fileCount]"
 			read answer
 		done
-		returnedFile=$(eval echo $\{`echo $answer`\})
+		returnedFile=`echo "$1" | $SED_BIN -n "${answer}p"`
 	fi
 }
 
@@ -135,7 +136,7 @@ __main () {
 			echo "*** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
 			break
 		fi
-		__fileSelection $listOfZipFiles
+		__fileSelection "$listOfZipFiles"
 		if [ ! $? -eq 0 ]; then
 			echo "*** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
 			break
@@ -143,7 +144,7 @@ __main () {
 		zipFile="$returnedFile"
 		__log "Selected ZIP file: $zipFile"
 		listOfSrtFiles=`__getSrtFromUrl "$STEU_URL/$returnedFile"`
-		__fileSelection $listOfSrtFiles
+		__fileSelection "$listOfSrtFiles"
 		if [ ! $? -eq 0 ]; then
 			echo "*** Error downloading ZIP: $zipFile"
 			break
