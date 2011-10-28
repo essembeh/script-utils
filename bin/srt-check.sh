@@ -18,38 +18,42 @@ SRT_EXTENSIONS="srt"
 SHOW_ERROR="true"
 SHOW_MISSING="true"
 SHOW_ORPHAN="true"
+QUIET="false"
 
 ##
 ## Process file
 ##
 __processFile () {
 	theFile="$1"
-	if [ "$SHOW_ORPHAN" = "true" ]; then
+	if [ "$SHOW_MISSING" = "true" ]; then
 		for currentExtension in $MOVIE_EXTENSIONS; do 
 			if echo "$theFile" | $GREP_BIN -q "$currentExtension$"; then
 				if __findMissing "$theFile"; then
 					return 0
 				else
-					echo "orphan  $theFile"
+					test "$QUIET" = "true" || echo -n "[missing] "
+					echo "$theFile"
 					return 1
 				fi
 			fi
 		done
 	fi
-	if [ "$SHOW_MISSING" = "true" ]; then
+	if [ "$SHOW_ORPHAN" = "true" ]; then
 		for currentExtension in $SRT_EXTENSIONS; do 
 			if echo "$theFile" | $GREP_BIN -q "$currentExtension$"; then
 				if __findOrphan "$theFile"; then
 					return 0
 				else
-					echo "missing $theFile"
+					test "$QUIET" = "true" || echo -n "[orphan]  "
+					echo "$theFile"
 					return 1
 				fi
 			fi
 		done
 	fi
-	if [ "$SHOW_ERROR" = "true" ]; then
-		echo "error   $theFile"
+	if [ "$SHOW_ERROR" = "true" ]; then   
+		test "$QUIET" = "true" || echo -n "[error]   "
+		echo "$theFile"
 	fi
 	return 2
 }
@@ -104,14 +108,23 @@ __main () {
 endOfLoop="false"
 while [ "$endOfLoop" = "false" ]; do 
 	case "$1" in 
-		"--no-orphan")
-			SHOW_ORPHAN="false"
-			shift;;
-		"--no-missing")
+		"-o" | "--only-orphan")
+			SHOW_ORPHAN="true"
 			SHOW_MISSING="false"
-			shift;;
-		"--no-error")
 			SHOW_ERROR="false"
+			shift;;
+		"-m" | "--only-missing")
+			SHOW_ORPHAN="false"
+			SHOW_MISSING="true"
+			SHOW_ERROR="false"
+			shift;;
+		"-e" | "--only-error")
+			SHOW_ORPHAN="false"
+			SHOW_MISSING="false"
+			SHOW_ERROR="true"
+			shift;;
+		"-q" | "--quiet")
+			QUIET="true"
 			shift;;
 		*)
 			endOfLoop="true";;
