@@ -14,13 +14,17 @@ CP_BIN="`which cp` -vi" || exit 1
 ## CONSTANTS
 STEU_URL="http://www.sous-titres.eu/series"
 STEU_DISCRIM='class="subList"'
-VERBOSE=""
+
+## Options
+VERBOSE="false"
+FILTER_EPNUMBER="true"
+FORCE_OVERWRITE="false"
 
 ##
 ## Prints log
 ##
 __log () {
-	test -n "$VERBOSE" && echo "$@"
+	test "$VERBOSE" = "true" && echo "$@"
 }
 
 ##
@@ -117,6 +121,27 @@ __computeSrtFilename () {
 }
 
 ## 
+## man
+##
+__usage () {
+	echo "NAME"
+	echo "    srt-dl - Sub title downloader"
+	echo ""
+	echo "USAGE"
+	echo "    srt-dl [OPTIONS] <EPISODE> <EPISODE> ..."
+	echo ""
+	echo "OPTIONS"
+	echo "    -h, --help"
+	echo "        Diplay this message"
+	echo "    -f, --force"
+	echo "        Force srt download even if srt file is already present"
+	echo "    -v, --verbose "
+	echo "        More verbose"
+	echo "    -a, --all"
+	echo "        Propose the choice of the zip file, does not filter with episode number"
+}
+
+## 
 ## Main 
 ##
 __main () {
@@ -125,29 +150,37 @@ __main () {
 		echo "Find SRT for File: $episodeName"
 		targetSrtFile=`__computeSrtFilename "$currentEpisode"`
 		__log "SRT target: $targetSrtFile"
+		if test -f "$targetSrtFile"; then
+			echo "     The srt file already exists: $targetSrtFile"
+			test "$FORCE_OVERWRITE" = "true" || continue
+		fi
 		serieName=`__getSerieNameFromFile "$episodeName"`
 		__log "Serie name: $serieName"
 		serieHomepage=`__getSerieHomepage "$serieName"` 
 		__log "Serie homepage: $serieHomepage"
 		episodeNumber=`__getEpisodeNumber "$episodeName"`
 		__log "Episode number: $episodeNumber"
-		listOfZipFiles=`__getZipUrls "$serieHomepage" "$episodeNumber"`
+		if [ "$FILTER_EPNUMBER" = "true" ]; then
+			listOfZipFiles=`__getZipUrls "$serieHomepage" "$episodeNumber"`
+		else
+			listOfZipFiles=`__getZipUrls "$serieHomepage"`
+		fi
 		if [ ! $? -eq 0 ]; then
-			echo "*** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
-			break
+			echo " *** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
+			continue
 		fi
 		__fileSelection "$listOfZipFiles"
 		if [ ! $? -eq 0 ]; then
 			echo "*** Error getting subtitles for episode: $episodeNumber, on page: $serieHomepage"
-			break
+			continue
 		fi
 		zipFile="$returnedFile"
 		__log "Selected ZIP file: $zipFile"
 		listOfSrtFiles=`__getSrtFromUrl "$STEU_URL/$returnedFile"`
 		__fileSelection "$listOfSrtFiles"
 		if [ ! $? -eq 0 ]; then
-			echo "*** Error downloading ZIP: $zipFile"
-			break
+			echo " *** Error downloading ZIP: $zipFile"
+			continue
 		fi
 		srtFile="$returnedFile"
 		__log "SRT file: $srtFile"
@@ -155,4 +188,29 @@ __main () {
 	done
 }
 
+endOfLoop="false"
+while [ "$endOfLoop" = "false" ]; do
+	case "$1" in 
+		"-a" | "--all")
+			echo "+++ Do not filter zip file with episode number"
+			FILTER_EPNUMBER="false"
+			shift;;
+		"-f" | "--force")
+			echo "+++ Force srt even if the srt file already exists"
+			FORCE_OVERWRITE="true"
+			shift;;
+		"-v" | "--verbose")
+			echo "+++ Verbose mode"
+			VERBOSE="true"
+			shift;;
+		"-h" | "--help")
+			__usage 
+			exit 0;;
+		"-"*)
+			__usage 
+			exit 1;;
+		*)
+			endOfLoop="true";;
+	esac
+done
 __main $@
