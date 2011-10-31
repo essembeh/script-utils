@@ -103,7 +103,7 @@ __fileSelection () {
 			i=`expr $i + 1`
 		done
 		answer=0
-		while [ $answer -lt 1 -o $answer -ge $fileCount ]; do
+		while [ $answer -lt 1 -o $answer -gt $fileCount ]; do
 			echo "Enter a file ? [1-$fileCount]"
 			read answer
 		done
