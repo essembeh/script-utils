@@ -1,8 +1,5 @@
 #!/bin/bash
 
-## Options
-SHOW_FULLPATH="false"
-
 ##
 ## Common
 ## 
@@ -42,11 +39,11 @@ fi
 ##
 ## Main
 ##
-$GREP_BIN -v "^#" "$appConfigurationFile" | while read currentPath currentPattern; do
-	lastFile=`__findFiles "$currentPath" "$currentPattern" | tail -1`
-	if [ "$SHOW_FULLPATH" = "true" ]; then
-		echo "$lastFile"
-	else
-		$BASENAME_BIN "$lastFile"
-	fi
+commandToApply="$1"
+test -z "$commandToApply" && commandToApply="echo"
+$GREP_BIN -v "^#" "$appConfigurationFile" | while read currentPath currentPattern count; do
+	test -z "$count" && count=1
+	__findFiles "$currentPath" "$currentPattern" | tail -$count | while read line; do 
+		$commandToApply "$line"
+	done
 done
