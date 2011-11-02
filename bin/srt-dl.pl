@@ -1,9 +1,12 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl 
 ##
 ## srt-dl a tool to download srt.
 ##
 ##
-## Dependencies (for Debian GNU/Linux): libwww-perl libstring-approx-perl
+## Dependencies (for Debian GNU/Linux): 
+##   apt-get install libwww-perl libstring-approx-perl
+## Using cpan:
+##   install Text::Levenshtein 
 ##
 package org::essembeh::script;
 
