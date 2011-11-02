@@ -50,7 +50,7 @@ sub getSerieIdentifier {
 	my $serieId = $serieName;
 	$serieId =~ tr/[A-Z]/[a-z]_/; 
 	$serieId =~ tr/ ./_/;
-	&printMessage("debug", "getSerieIdentifie: ".$serieName." --> ".$serieId);
+	&printMessage("debug", "Serie identifier: : ".$serieId);
 	$serieId;
 }
 
@@ -60,7 +60,7 @@ sub getSerieIdentifier {
 sub getSerieHomepage {
 	my $serieName = $_[0];
 	my $url = $STEU_PREFIX.&getSerieIdentifier($serieName).".html";
-	&printMessage("debug", "getSerieHomepage: ".$serieName." --> ".$url);
+	&printMessage("debug", "Serie Homepage: ".$url);
 	$url;
 }
 
@@ -73,7 +73,7 @@ sub getEpisodeNumber {
 	if ($episode =~ /.*[sS](\d+)[eE](\d+).*/) {
 		$number = $1."x".$2;
 		$number =~ s/^0//;
-		&printMessage("debug", "getEpisodeNumber: ".$episode." --> ".$number);
+		&printMessage("debug", "Episode number: ".$number);
 		$number;
 	} else {
 		undef;
@@ -84,10 +84,10 @@ sub getEpisodeNumber {
 ## Retreives the serie name from a filename
 ##
 sub getSerieNameFromFile {
-	my $filename = &mybasename($_[0]);
-	$filename =~ s@[\. ][sS]\d+[eE]\d+.*@@;
-	&printMessage("debug", "getSerieNameFromFile: ".$_[0]." --> ".$filename);
-	$filename;
+	my $name = &mybasename($_[0]);
+	$name =~ s@[\. ][sS]\d+[eE]\d+.*@@;
+	&printMessage("debug", "Serie name: ".$name);
+	$name;
 }
 
 ##
@@ -96,9 +96,6 @@ sub getSerieNameFromFile {
 sub getZipFileInPage {
 	my $url=$_[0];
 	my $filter = $_[1];
-	unless ($OPTIONS{"allzip"}) {
-		&printMessage("debug", "getZipFileInPage: filter=".$filter);
-	}
 	my @zipFiles;
 	my $html = get($url);
 	if ($html) {
@@ -133,7 +130,6 @@ sub selectInList {
 			&printMessage("question", "Select a file: [0-".($max-1)."]?");
 			chop($item = <STDIN>);
 		}until ($item =~ /^\d+$/ && $item>=0 && $item < $max);
-		&printMessage("debug", "selectFileInList: ".$_[$item]);
 		$_[$item];
 	} else {
 		$_[0];
@@ -145,9 +141,17 @@ sub selectInList {
 ##
 sub downloadFileInTmp {
 	my $url = $_[0];
-	my $tmpFile="/tmp/".&mybasename($url);
-	system("wget -q ".$url." -O ".$tmpFile);
-	$tmpFile;
+	my $document = get($url);
+	if ($document) {
+		my $tmpPath = tmpnam();
+		my $tmpFile = FileHandle->new($tmpPath, "w");
+		$tmpFile->write($document);
+		$tmpFile->close();
+		&printMessage("debug", "File successfully downloaded: ".$url." --> ".$tmpPath);
+		$tmpPath;
+	} else {
+		&printMessage("debug", "Error getting url: ".$url);
+	}
 }
 	
 ##
@@ -162,6 +166,7 @@ sub extractSrtFromZip {
 	 my $betterDistance = 0;
 	 my $targetFR = $target;
 	 $targetFR =~ s/srt$/FR.srt/;
+	 &printMessage("debug", "Opening zip: ".$zipPath);
 	 foreach my $member ($zipObject->members) {
 		 my $filename = $member->fileName();
 		 if ($filename =~ /srt$/) {
@@ -192,7 +197,7 @@ sub computeTargetSrtFile {
 	my $file = $_[0];
 	$file =~ s/[^\.]*$//;
 	$file =~ s/$/srt/;
-	&printMessage("debug", "computeTargetSrtFile: ".$_[0]." --> ".$file);
+	&printMessage("debug", "Target srt: ".$file);
 	$file;
 }
 
@@ -290,7 +295,6 @@ foreach my $episode (@ARGV) {
 	}
 	&printMessage("info", "Fetching srt for episode: ".$episode);
 	my $target=&computeTargetSrtFile($episode);
-	&printMessage("debug", "Target srt file: ".$target);
 	if (-f $target) {
 		if (!$OPTIONS{"force"}) {
 			&printMessage("error", "The srt file already exists");
