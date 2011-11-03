@@ -20,7 +20,9 @@ use File::Temp qw/:POSIX/;
 use File::Copy;
 
 
-our (%OPTIONS, $STEU_PREFIX);
+our (%OPTIONS, $STEU_PREFIX, $LEVENSHSTEIN_OPTIM);
+$STEU_PREFIX = "http://www.sous-titres.eu/series/";
+$LEVENSHSTEIN_OPTIM = "fr.vf";
 
 
 ##
@@ -41,10 +43,40 @@ sub printMessage {
 ##
 ## Sort of basename
 ##
-sub mybasename {
+sub myBasename {
 	my $filename = substr($_[0], rindex($_[0], "/") + 1); 
 	$filename;
 }
+
+##
+## Uniform string for distance computation
+##
+sub unifString {
+	my $str = $_[0];
+	$str =~ tr/[A-Z]/[a-z]/;
+	$str =~ s/[^A-Za-z0-9]/./g;
+	$str =~ s/[sS](?:0*)([0-9]+)[eE]([0-9]+)/$1$2/;
+	$str =~ s/([0-9]+)x([0-9]+)/$1$2/;
+	my @words = sort(split(/\./, $str));
+	$str = "";
+	foreach my $word (@words) {
+		$str = $str.$word.".";
+	}
+	$str;
+}
+
+##
+## Comput string distance
+##
+sub myDistance {
+	my $a = &unifString($_[0]);
+	my $b = &unifString($_[1]);
+	my $dist = distance($a, $b);
+	$dist = abs($dist);
+	&printMessage("debug", "Distance: ".$dist.", ".$a." / ".$b);
+	$dist;
+}
+
 ##
 ## Get the serie identifier on soust-titres.eu
 ##
@@ -87,7 +119,7 @@ sub getEpisodeNumber {
 ## Retreives the serie name from a filename
 ##
 sub getSerieNameFromFile {
-	my $name = &mybasename($_[0]);
+	my $name = &myBasename($_[0]);
 	$name =~ s@[\. ][sS]\d+[eE]\d+.*@@;
 	&printMessage("debug", "Serie name: ".$name);
 	$name;
@@ -123,9 +155,9 @@ sub getZipFileInPage {
 sub selectInList {
 	my $max = @_;
 	if ($max > 1) {
-		@_ = sort { &mybasename($a) cmp &mybasename($b) } @_;
+		@_ = sort { &myBasename($a) cmp &myBasename($b) } @_;
 		for (my $i = 0; $i < $max; $i++) {
-			my $file = &mybasename($_[$i]);
+			my $file = &myBasename($_[$i]);
 			&printMessage("question", "[".$i."] ".$file);
 		}
 		my $item;
@@ -167,18 +199,18 @@ sub extractSrtFromZip {
 	 my @content;
 	 my $betterFile;
 	 my $betterDistance = 0;
-	 my $targetFR = $target;
-	 $targetFR =~ s/srt$/FR.srt/;
+	 my $targetOptim = $target;
 	 &printMessage("debug", "Opening zip: ".$zipPath);
+	 $targetOptim =~ s/srt$/$LEVENSHSTEIN_OPTIM.srt/;
+	 &printMessage("debug", "Target for distance computing: ".$targetOptim);
 	 foreach my $member ($zipObject->members) {
 		 my $filename = $member->fileName();
 		 if ($filename =~ /srt$/) {
-			my $distance = distance($filename, $targetFR);
-			&printMessage("debug", "Distance: ".$distance." for file: ".$filename);
+			my $distance = &myDistance($filename, $targetOptim);
 			unless ($OPTIONS{"allsrt"}) {
-				if (!$betterFile || $distance < $betterDistance) {
+				if (!$betterFile || abs($distance) < $betterDistance) {
 					$betterFile = $filename;
-					$betterDistance = $distance;
+					$betterDistance = abs($distance);
 				}
 			}
 			push(@content, $filename);
@@ -190,7 +222,7 @@ sub extractSrtFromZip {
 		 &printMessage("debug", "Auto choosing file: ".$betterFile." with distance: ".$betterDistance);
 	 }
 	 $zipObject->extractMember($betterFile, $target);
-	 &printMessage("info", "File copied: ".$betterFile." --> ".$target);
+	 &printMessage("info", "File copied: ".$betterFile);
 }
 
 ##
@@ -280,13 +312,15 @@ COPYRIGHT
 ##
 ## Main 
 ##
-$STEU_PREFIX = "http://www.sous-titres.eu/series/";
 
-GetOptions(\%OPTIONS, "help", "verbose", "force", "allzip", "allsrt", "clean");
+unless (GetOptions(\%OPTIONS, "help", "verbose", "force", "allzip", "allsrt", "clean")) {
+	displayHelp;
+	exit 1;
+}
 
 if ($OPTIONS{"help"}) {
 	displayHelp;
-	exit 1;
+	exit 0;
 }
 
 my $firstLoop = 1;
