@@ -4,7 +4,7 @@
 ##
 ##
 ## Dependencies (for Debian GNU/Linux): 
-##   apt-get install libwww-perl libstring-approx-perl
+##   apt-get install libwww-perl libtext-levenshtein-perl
 ## Using cpan:
 ##   install Text::Levenshtein 
 ##
