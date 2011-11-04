@@ -34,7 +34,7 @@ fi
 ##
 ## Main
 ##
-commandToApply="$1"
+commandToApply="$@"
 test -z "$commandToApply" && commandToApply="echo"
 $GREP_BIN -v "^#" "$appConfigurationFile" | while read currentPath currentPattern count; do
 	test -z "$count" && count=1
