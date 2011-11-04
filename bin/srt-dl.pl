@@ -333,11 +333,11 @@ foreach my $episode (@ARGV) {
 	&printMessage("info", "Fetching srt for episode: ".$episode);
 	my $target=&computeTargetSrtFile($episode);
 	if (-f $target) {
-		if (!$OPTIONS{"force"}) {
-			&printMessage("error", "The srt file already exists");
-			next;
+		if ($OPTIONS{"force"}) {
+			&printMessage("debug", "Srt already exists, will be overwritten");
 		} else {
-			&printMessage("debug", "Srt already exists");
+			&printMessage("info", "The srt file already exists");
+			next;
 		}
 	}
 	my $serie = &getSerieNameFromFile($episode);
