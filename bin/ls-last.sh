@@ -21,18 +21,13 @@ __findFiles () {
 ##
 ## Retrieve CONF
 ##
-appBinary="$0"
-while [ -L "$appBinary" ]; do
-	appLink="$(readlink "$appBinary")"
-	if echo "$appLink" | $GREP_BIN -q "^/"; then
-		appBinary="$appLink"
-	else
-		appBinary="$(dirname "$appBinary")/$appLink"
-	fi  
+CONF_FILES="/etc/ls-last.conf $HOME/.ls-last.conf"
+for currentConfFile in $CONF_FILES; do
+	test -f "$currentConfFile" && appConfigurationFile="$currentConfFile";
 done
-appConfigurationFile="${appBinary%.sh}.conf"
+
 if [ ! -f "$appConfigurationFile" ]; then
-	echo "Cannot find configuration file: $appConfigurationFile"
+	echo "Cannot find configuration file, should be one of: $CONF_FILES"
 	exit 2
 fi
 
