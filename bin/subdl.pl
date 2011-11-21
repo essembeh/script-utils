@@ -167,7 +167,7 @@ sub computeTargetSrtFile {
 sub convertSubtitleToUTF8 {
 	my ($srtPath) = @_;
 	my $magic = `file $srtPath`;
-	if ($magic =~ /iso-8859/i) {
+	unless ($magic =~ /utf-8/i) {
 		my ($tmpFile, $tmpPath) = File::Temp::tempfile();
 		printMessage("debug", "Backup srt file: ".$tmpPath);
 		File::Copy::copy($srtPath, $tmpPath);
@@ -227,10 +227,10 @@ sub unzipInTmpDir {
 sub displayHelp {
     print"\
 NAME
-    sub-dl - Subtitle downloader version 1.1
+    subdl - Subtitle downloader version 1.1
 
 USAGE
-    sub-dl --verbose --(no)force --(no)autopack --(no)autosrt --(no)clean 
+    subdl --verbose --(no)force --(no)autopack --(no)autosrt --(no)clean 
            --(no)utf8 --site=(steu|tvnet) --lang=(fr|en) <EPISODE> ...
 
 OPTIONS
@@ -275,7 +275,7 @@ OPTIONS
         The lang of the subtitles to fetch.
 
 EXAMPLES
-    sub-dl --force --verbose --clean My.Serie.S02E04.mkv
+    subdl --force --verbose --clean My.Serie.S02E04.mkv
         Automatically try to download subtitles for the episode 2x04.
         Then choose the better one. 
         Finally, the srt file will get its tags removed.
