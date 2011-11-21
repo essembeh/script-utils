@@ -133,15 +133,15 @@ foreach my $file (@ARGV) {
 	printMessage() if ($count ++);
 	
 	## Check srt
-	if (! $file =~ /\.srt$/) {
+	unless ($file =~ /\.srt$/) {
 		printMessage("info", "Not a srt file: ".$file);
 		next;
-	} elsif (! -f $file) {
+	} 
+	unless(-f $file) {
 		printMessage("info", "File does not exist: ".$file);
 		next;
-	} else {
-		printMessage("info", "Cleaning file: ".$file);
-	}
+	} 
+	printMessage("info", "Cleaning file: ".$file);
 
 	## Clean the srt
 	if ($optionClean) {
