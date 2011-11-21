@@ -292,8 +292,8 @@ package Subdl::site::sous_titres_eu;
 ##
 ## Variables
 ##
-our ($STEU_PREFIX, $LEVENSHSTEIN_OPTIM);
-$STEU_PREFIX = "http://www.sous-titres.eu/series/";
+our ($URL_PREFIX, $LEVENSHSTEIN_OPTIM);
+$URL_PREFIX = "http://www.sous-titres.eu/series/";
 
 
 ##
@@ -323,7 +323,7 @@ sub new {
 ##
 ##
 sub getName {
-	return "www.sous-titres.eu";
+	return $URL_PREFIX;
 }
 
 
@@ -335,7 +335,7 @@ sub getSerieHomepage {
 	my $serieName = $fileInfos{serie};
 	$serieName =~ tr/[A-Z]/[a-z]_/; 
 	$serieName =~ s/[^a-z0-9]/_/g;
-	my $url = $STEU_PREFIX.$serieName.".html";
+	my $url = $URL_PREFIX.$serieName.".html";
 	Subdl::common::printMessage("debug", "Serie Homepage: ".$url);
 	return $url;
 }
@@ -349,15 +349,13 @@ sub getAllPackForSerie {
 	my %listOfPacks;
 	my $html = LWP::Simple::get($serieHomepage);
 	if ($html) {
-		my @html = split('\n', $html);
-		foreach my $line (@html) {
-			if ($line =~ /href="(.*\.zip)"/) {
-				my $currentPack = $1;
-				my $packUrl = $STEU_PREFIX.$currentPack;
-				my $packName = Subdl::common::basename($currentPack);
-				Subdl::common::printMessage("debug", "Found pack: ".$packName);
-				$listOfPacks{$packName} = $packUrl;
-			}
+		$html =~ tr/\r\n//d;
+		my @links = $html =~ m/href="(.*?\.zip)"/g;
+		foreach my $currentPack (@links) {
+			my $packUrl = $URL_PREFIX.$currentPack;
+			my $packName = Subdl::common::basename($currentPack);
+			Subdl::common::printMessage("debug", "Found pack: ".$packName);
+			$listOfPacks{$packName} = $packUrl;
 		}
 	} else {
 		Subdl::common::printMessage("error", "Cannot get page: ".$serieHomepage);
@@ -375,11 +373,10 @@ sub autoChoosePack {
 	while ( my ($key, $value) = each(%listOfPacks) ) { 
 		if ($key =~ /$pattern/) {
 			Subdl::common::printMessage("debug", "Auto choose pack: ".$key);
-			$selectedPack = $value;
-			last
+			return $value;
 		}   
 	}   
-	return $selectedPack;
+	Subdl::common::printMessage("error", "Cannot find a valid pack (use --noautopack to pick one manually)");
 }
 
 ##
@@ -436,7 +433,7 @@ package Subdl::site::tvsubtitles_net;
 ##
 ## Variables
 ##
-our ($URL_PREFIX, @VALID_LANG);
+our ($URL_PREFIX, $VALID_LANG);
 $URL_PREFIX = "http://www.tvsubtitles.net/";
 
 
@@ -451,15 +448,7 @@ sub new {
 	bless $self, $class;
 
 	# Set lang for Levenshtein optimisation
-	my $lang = shift;
-	if ($lang eq "fr") {
-		@VALID_LANG = ('francais', 'franais', 'french');
-	} elsif ($lang eq "en") {
-		@VALID_LANG = ('english');
-	} else {
-		Subdl::common::printMessage("info", "Invalid lang: ".$lang);
-	}
-
+	$VALID_LANG = shift;
 	return $self;
 }
 
@@ -468,7 +457,7 @@ sub new {
 ##
 ##
 sub getName {
-	return "www.tvsubtitles.net";
+	return $URL_PREFIX;
 }
 
 
@@ -480,14 +469,12 @@ sub getSerieHomepage {
 	my $url;
 	my $html = LWP::Simple::get($URL_PREFIX."tvshows.html"); 
 	if ($html) {
-		my @html = split ('\n', $html);
 		my $serieName = $fileInfos{serie};
-		foreach my $line (@html) {
-			if ($line =~ /$serieName/i) {
+		my %allSeries = $html =~ m@<a href="tvshow-(\d+)-\d+\.html">(.*?)</a>@g;
+		while (my ($id, $name) = each (%allSeries)) {
+			if ($name =~ /$serieName/i) {
 				Subdl::common::printMessage("debug", "Found serie on site");
-				$line =~ /href="(tvshow-\d+-)\d+.html/;
-				my $showId = $1;
-				$url = $URL_PREFIX.$showId.$fileInfos{season}.".html";
+				$url = $URL_PREFIX."tvshow-".$id."-".$fileInfos{season}.".html";
 				last;
 			}
 		}
@@ -506,19 +493,12 @@ sub getAllPackForSerie {
 	my %listOfPacks;
 	my $html = LWP::Simple::get($serieHomepage);
 	if ($html) {
-		my @html = split ('\n', $html);
-		my $currentEp;
-		foreach my $line (@html) {
-			if ($currentEp) {
-				if ($line =~ /href="(episode-\d+.html)/) {
-					my $link = $URL_PREFIX.$1;
-					$listOfPacks{$currentEp} = $link;
-					Subdl::common::printMessage("debug", "Found pack: ".$currentEp." -> ".$link);
-				}
-				$currentEp = "";
-			} elsif ($line =~ /<td>(\d+x\d+)<\/td>/i) {
-				$currentEp=$1;
-			}
+		$html =~ tr/\r\n//d;
+		my %allEp = $html =~ m@<tr.*?>.*?<td>(\d+x\d+)</td>.*?<a href="(episode-\d+).html">.*?</tr>@g;
+		while (my ($ep, $url) = each (%allEp)) {
+			my $link = $URL_PREFIX.$url."-".$VALID_LANG.".html";
+			$listOfPacks{$ep} = $link;
+			Subdl::common::printMessage("debug", "Found pack: ".$ep." -> ".$link);
 		}
 	}
 	return %listOfPacks;
@@ -535,28 +515,12 @@ sub autoChoosePack {
 	while ( my ($key, $value) = each(%listOfPacks) ) {
 		if ($key =~ /$pattern/) {
 			Subdl::common::printMessage("debug", "Auto choose pack: ".$key);
-			$selectedPack = $value;
-			last
+			return $value;
 		}
 	}
-	return $selectedPack;
+	Subdl::common::printMessage("error", "Cannot find a valid pack (use --noautopack to pick one manually)");
 }
 
-
-##
-##
-##
-sub validLang {
-	my ($this, $lang) = @_;
-	$lang =~ tr/[A-Z]/[a-z]/;
-	$lang =~ s/[^a-z]//g;
-	foreach my $string (@VALID_LANG) {
-		if ($lang =~ $string) {
-			return 1;
-		}
-	}
-	return 0;
-}
 
 ##
 ##
@@ -566,19 +530,13 @@ sub getAllSubtitlesForPack {
 	my $html = LWP::Simple::get($packUrl);
 	my %content;
 	if ($html) {
-		$html =~ tr/\r\n/  /;
-		while ($html =~ s@(<a href="/subtitle-\d+\.html"><div title="([^"]+)".*?</a>)@plop@) {
-			my $content = $1;
-			my $lang = $2;
-			if ($this->validLang($lang)) {
-				$content =~ m@^<a href="/?(.*?\.html).*?(<h5.*</h5>)@;
-				my $srtUrl = $URL_PREFIX.$1;
-				my $srtName = $2;
-				$srtUrl =~ s/subtitle-/download-/;
-				$srtName =~ s/<.*?>//g;
-				Subdl::common::printMessage("debug", "Found srt: ".$srtName." -> ".$srtUrl);
-				$content{$srtName} = $srtUrl;
-			}
+		$html =~ tr/\r\n//d;
+		my %allSubs = $html =~ m@<a href="/subtitle-(\d+)\.html">.*?<h5.*?>(.*?)</h5>.*?</a>@g;
+		while (my($id, $name) = each(%allSubs)) {
+			$name =~ s/<.*?>//g;
+			my $srtUrl = $URL_PREFIX."download-".$id.".html";
+			Subdl::common::printMessage("debug", "Found srt: ".$name." -> ".$srtUrl);
+			$content{$name} = $srtUrl;
 		}
 	}
 	return %content;
@@ -702,15 +660,12 @@ foreach my $file (@ARGV) {
 	} else {
 		$selectedPackUrl = Subdl::common::userSelection(%listOfPacks);
 	}
-	unless ($selectedPackUrl) {
-		Subdl::common::printMessage("error", "Invalid pack");
-		next;
-	}
+	next unless ($selectedPackUrl);
 
 	## Step 3a: Get srt list
 	my %listOfSubtitles = $site->getAllSubtitlesForPack($selectedPackUrl);
 	unless (%listOfSubtitles) {
-		Subdl::common::printMessage("error", "No srt found selected pack");
+		Subdl::common::printMessage("error", "No srt found for selected pack");
 		next;
 	}
 		
@@ -721,10 +676,7 @@ foreach my $file (@ARGV) {
 	} else {
 		$selectedSubtitleUrl = Subdl::common::userSelection (%listOfSubtitles);
 	}
-	unless ($selectedSubtitleUrl) {
-		Subdl::common::printMessage("error", "Invalid subtitle");
-		next;
-	}
+	next unless ($selectedSubtitleUrl);
 
 	## Step 4: Copy the srt
 	$site->copySubtitle($selectedSubtitleUrl, $targetSrtFile);
