@@ -1,78 +1,64 @@
 #!/bin/bash
-
+##
+## Functions
+##
+__printLine () {
+	__print "$1" "$2"
+	echo 
+}
+__print () {
+	printf "%10s %s" "[$1]" "$2"
+}
+__error () {
+	__printLine error "$1"
+	exit 1
+}
+__getLine () {
+	$sed -n ${2}p < "$1"
+}
 ##
 ## Binaries
 ##
-test -n "$EDITOR" || (EDITOR=`which vi` || exit 1)
-AWK_BIN=`which awk` || exit 1
-SED_BIN=`which sed` || exit 1
-MV_BIN=`which mv` || exit 1
-CP_BIN=`which cp` || exit 1
-MKTEMP_BIN=`which mktemp` || exit 1
-SEQ_BIN=`which seq` || exit 1
-DIRNAME_BIN=`which dirname` || exit 1
-BASENAME_BIN=`which basename` || exit 1
-
-##
-## Returns a line of a file 
-##
-getLine () {
-	theFile="$1"
-	theLine="$2"
-## Head way
-	#head -n ${theLine} $"theFile" | tail -1
-## Sed way
-	$SED_BIN -n "${theLine}p" < "$theFile"
-# Awk way
-	#$AWK_BIN NR==$theLine "$theFile"
-}
-
-
+awk=`which awk` || __error "Error finding command: awk"
+sed=`which sed` || __error "Error finding command: sed"
+basename=`which basename` || __error "Error finding command: basename"
+dirname=`which dirname` || __error "Error finding command: dirname"
+mktemp=`which mktemp` || __error "Error finding command: mktemp"
+seq=`which seq` || __error "Error finding command: seq"
+mv=`which mv` || __error "Error finding command: mv"
+wc=`which wc` || __error "Error finding command: wc"
 ##
 ## Main
 ##
-if [ $# -eq 0 ]; then
-	echo "Usage: $0 <FILE> <FILE> ..."
-	exit 2
-fi
-
-## Create tmp directory
-tmpFolder=`$MKTEMP_BIN -d` || exit 3
-## Create tmp files
-oldNamesFile="$tmpFolder/oldnames"
-newNamesFile="$tmpFolder/newnames"
-
-for FILE in "$@"; do 
-	echo "$FILE" >> "$oldNamesFile"
+test $# -eq 0 && __error "Usage: $0 <FILE> <FILE> ..."
+test -z "$EDITOR" && export EDITOR=vim
+tmpFileA=`$mktemp` || __error "Error with mktemp"
+tmpFileB=`$mktemp` || __error "Error with mktemp"
+for currentArg in "$@"; do 
+	if test -e "$currentArg"; then
+		echo "$currentArg" >> "$tmpFileA"
+		echo "$currentArg" >> "$tmpFileB"
+	fi
 done
-
-$CP_BIN "$oldNamesFile" "$newNamesFile"
-
-$EDITOR "$newNamesFile" 
-
-countOld=$(wc -l "$oldNamesFile" | $AWK_BIN '{print $1}')
-countNew=$(wc -l "$newNamesFile" | $AWK_BIN '{print $1}')
-echo "$countOld $countNew"
-if [ ! "$countOld" = "$countNew" ]; then
-	echo "Line count does not match"
-	exit 4
-fi
-
-for currentIndex in `$SEQ_BIN 1 $countOld`; do 
-	oldLine="`getLine "$oldNamesFile" $currentIndex`"
-	oldDirname=`$DIRNAME_BIN "$oldLine"`
-	oldBasename=`$BASENAME_BIN "$oldLine"`
-	newLine="`getLine "$newNamesFile" $currentIndex`"
-	newDirname=`$DIRNAME_BIN "$newLine"`
-	newBasename=`$BASENAME_BIN "$newLine"`
-	if [ ! "$oldDirname" = "$newDirname" ]; then
-		echo "*** DO NOT MODIFY DIRNAME, ONLY BASENAME FOR FILE: $oldLine"
+$EDITOR "$tmpFileB" 
+lineCountA=$($wc -l "$tmpFileA" | $awk '{print $1}')
+lineCountB=$($wc -l "$tmpFileB" | $awk '{print $1}')
+test $lineCountA -eq $lineCountB || __error "Line count does not match"
+for index in `$seq 1 $lineCountA`; do 
+	currentFileA="`__getLine "$tmpFileA" $index`"
+	currentFileB="`__getLine "$tmpFileB" $index`"
+	## Check path
+	dirnameA=`$dirname "$currentFileA"`
+	dirnameB=`$dirname "$currentFileB"`
+	if [ ! "$dirnameA" = "$dirnameB" ]; then
+		__printLine error "Different dirnames, do nothing for file: $currentFileA"
 	else
-		if [ "$oldBasename" = "$newBasename" ]; then
-			echo "*** Same name for file: $oldLine"
-		else
-			echo -n "    "
-			$MV_BIN -v "$oldLine" "$newLine"
+		basenameA=`$basename "$currentFileA"`
+		basenameB=`$basename "$currentFileB"`
+		if [ ! "$basenameA" = "$basenameB" ]; then
+			__print info ""
+			$mv -v "$currentFileA" "$currentFileB"
 		fi
 	fi
-done	
+done
+
