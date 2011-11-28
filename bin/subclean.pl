@@ -31,7 +31,7 @@ sub printMessage {
 ##
 sub convertSubtitleToUTF8 {
 	my ($srtPath) = @_;
-	my $magic = `file $srtPath`;
+	my $magic = `file "$srtPath"`;
 	unless ($magic =~ /utf-?8/i) {
 		my ($tmpFile, $tmpPath) = File::Temp::tempfile();
 		printMessage("debug", "Backup srt file: ".$tmpPath);
@@ -43,11 +43,9 @@ sub convertSubtitleToUTF8 {
 			$line = $converter->convert($line);
 			$srtFile->write($line);
 		}
-		printMessage("info", "Subtitle has been converted into UTF8");
+		printMessage("utf8", "File: ".$srtPath.", converted to UTF8");
 		$tmpFile->close();
 		$srtFile->close();
-	} else {
-		printMessage("debug", "Subtitle is already UTF8");
 	}
 }
 
@@ -67,9 +65,9 @@ sub removeTagFromSubtitle {
 		$line =~ s/\{[^\}].*\}//g and $nbTags++;
 		$srtFile->write($line);
 	}
-	my $level = "debug";
-	$level = "info" if ($nbTags);
-	printMessage($level, "Clean subtitle: ".$nbTags." tag(s) removed");
+	if ($nbTags) {
+		printMessage("tag", "File: ".$srtPath.", ".$nbTags." tag(s) removed");
+	}
 	$tmpFile->close();
 	$srtFile->close();
 }
@@ -130,18 +128,17 @@ if ($optionHelp) {
 # Main loop
 my $count = 0;
 foreach my $file (@ARGV) {
-	printMessage() if ($count ++);
 	
 	## Check srt
 	unless ($file =~ /\.srt$/) {
-		printMessage("info", "Not a srt file: ".$file);
+		printMessage("debug", "Not a srt file: ".$file);
 		next;
 	} 
 	unless(-f $file) {
-		printMessage("info", "File does not exist: ".$file);
+		printMessage("debug", "File does not exist: ".$file);
 		next;
 	} 
-	printMessage("info", "Cleaning file: ".$file);
+	printMessage("debug", "Cleaning file: ".$file);
 
 	## Clean the srt
 	if ($optionClean) {
