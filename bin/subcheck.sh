@@ -10,7 +10,7 @@ SED_BIN=`which sed` || exit 1
 ## Extensions
 ##
 MOVIE_EXTENSIONS="avi mkv mpg mpeg mp4 mov"
-SRT_EXTENSIONS="srt"
+SRT_EXTENSIONS="srt sub idx"
 
 ##
 ## Options
