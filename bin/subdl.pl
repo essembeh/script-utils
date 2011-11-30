@@ -535,8 +535,13 @@ sub getAllSubtitlesForPack {
 		while (my($id, $name) = each(%allSubs)) {
 			$name =~ s/<.*?>//g;
 			my $srtUrl = $URL_PREFIX."download-".$id.".html";
-			Subdl::common::printMessage("debug", "Found srt: ".$name." -> ".$srtUrl);
-			$content{$name} = $srtUrl;
+			if ($content{$name}) {
+				Subdl::common::printMessage("warn", "Multiple subtitles with the same name");
+				Subdl::common::printMessage("debug", "Ignoring srt: ".$name." -> ".$srtUrl);
+			} else {
+				Subdl::common::printMessage("debug", "Found srt: ".$name." -> ".$srtUrl);
+				$content{$name} = $srtUrl;
+			}
 		}
 	}
 	return %content;
