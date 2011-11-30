@@ -625,7 +625,7 @@ if ($optionSite eq "steu") {
 	Subdl::common::printMessage("error", "Invalid site: ".$optionSite);
 	exit 2;
 }
-Subdl::common::printMessage("info", "Using site: ".$site->getName());
+Subdl::common::printMessage("debug", "Using site: ".$site->getName());
 
 # Main loop
 my $count = 0;
