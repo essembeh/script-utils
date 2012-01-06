@@ -333,7 +333,7 @@ sub getName {
 sub getSerieHomepage {
 	my ($this, %fileInfos) = @_;
 	my $serieName = $fileInfos{serie};
-	$serieName =~ tr/[A-Z]/[a-z]_/; 
+	$serieName =~ tr/[A-Z]/[a-z]/; 
 	$serieName =~ s/[^a-z0-9]/_/g;
 	my $url = $URL_PREFIX.$serieName.".html";
 	Subdl::common::printMessage("debug", "Serie Homepage: ".$url);
