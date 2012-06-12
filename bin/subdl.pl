@@ -639,7 +639,7 @@ foreach my $file (@ARGV) {
 		if ($optionForce) {
 			Subdl::common::printMessage("info", "Srt already exists, will be overwritten");
 		} else {
-			Subdl::common::printMessage("error", "The srt file already exists (use --force to overwrite)");
+			Subdl::common::printMessage("info", "The srt file already exists (use --force to overwrite)");
 			next;
 		}
 	}
