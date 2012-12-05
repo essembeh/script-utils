@@ -121,14 +121,14 @@ sub userSelection {
 	my $max = @keys;
 	for (my $i = 0; $i < $max; $i++) {
 		my $key = @keys[$i];
-		printMessage("question", "[".$i."] ".$key);
+		printMessage("question", "[".($i+1)."] ".$key."\t [".($i+1)."]");
 	}
 	my $item;
 	do {
-		printMessage("question", "Select a file: [0-".($max-1)."]?");
+		printMessage("question", "Select a file: [1-".($max)."]?");
 		chop($item = <STDIN>);
-	} until ($item =~ /^\d+$/ && $item>=0 && $item < $max);
-	my $selection = $hash{$keys[$item]};
+	} until ($item =~ /^\d+$/ && $item > 0 && $item <= $max);
+	my $selection = $hash{$keys[$item - 1]};
 	printMessage("debug", "Selection: ".$selection);
 	return $selection;
 }
