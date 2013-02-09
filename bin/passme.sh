@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function getMoreHash {
-	 echo "$1" | sha1sum | awk '{print $1}' 
+	 echo -n "$1" | sha1sum | awk '{print $1}' 
 }
 
 PASSMESIZE=16
@@ -17,8 +17,9 @@ while [[ $# > 0 ]]; do
 	SEED="$1"; shift
 	HSEED=`getMoreHash "$SEED"`
 	HKEY=`getMoreHash "$HSEED$HMASTER"`
-	echo -n "$SEED --> "
-	echo "$HKEY" | base64 | head -c $PASSMESIZE
+	PASS=`echo "$HKEY" | base64 | head -c $PASSMESIZE`
+	echo "$SEED --> $PASS"
+	test -f "$PASSMEFILE" && echo "$SEED --> $PASS" >> "$PASSMEFILE"
 	echo 
 done
 
