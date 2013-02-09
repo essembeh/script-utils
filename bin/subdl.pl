@@ -116,12 +116,17 @@ sub getInformationFromEpisodeName {
 ##
 ##
 sub userSelection {
-	my (%hash) = @_;
+	my ($reference, %hash) = @_;
 	my @keys = sort(keys %hash);
 	my $max = @keys;
 	for (my $i = 0; $i < $max; $i++) {
 		my $key = @keys[$i];
-		printMessage("question", "[".($i+1)."] ".$key."\t [".($i+1)."]");
+		my $distanceString = "";
+		if ($reference) {
+			$distanceString = " (".Subdl::common::distance($reference, $key).") ";
+		}
+		printMessage("question", "[".($i+1)."] ".$distanceString.$key."\t [".($i+1)."]");
+		my $distance = 0;
 	}
 	my $item;
 	do {
@@ -663,7 +668,7 @@ foreach my $file (@ARGV) {
 	if ($optionAutopack) {
 		$selectedPackUrl = $site->autoChoosePack($fileInfos{season}, $fileInfos{episode}, %listOfPacks);
 	} else {
-		$selectedPackUrl = Subdl::common::userSelection(%listOfPacks);
+		$selectedPackUrl = Subdl::common::userSelection(0, %listOfPacks);
 	}
 	next unless ($selectedPackUrl);
 
@@ -679,7 +684,7 @@ foreach my $file (@ARGV) {
 	if ($optionAutosrt) {
 		$selectedSubtitleUrl = $site->autoChooseSubtitle ($targetSrtFile, %listOfSubtitles);
 	} else {
-		$selectedSubtitleUrl = Subdl::common::userSelection (%listOfSubtitles);
+		$selectedSubtitleUrl = Subdl::common::userSelection($targetSrtFile , %listOfSubtitles);
 	}
 	next unless ($selectedSubtitleUrl);
 
