@@ -1,6 +1,9 @@
 #!/bin/bash
 
-CONF="./mgit.conf"
+MGIT_PAGER="less -R"
+MGIT_CONF="./mgit.conf"
+MGIT_LIST="conf"
+
 GIT="/usr/bin/git"
 
 NORMAL="\e[0;39m" 
@@ -14,9 +17,8 @@ JAUNE="\e[1;33m"
 CYAN="\e[1;36m"
 
 function main () {
-	if test -f "$CONF"; then
-		echo "Using $CONF"
-		LIST=`cat "$CONF"`
+	if test "$MGIT_LIST" = "conf" && test -f "$MGIT_CONF"; then
+		LIST=`cat "$MGIT_CONF"`
 	else
 		LIST=`find -L . -name ".git" -type d | sort`
 	fi 
@@ -44,9 +46,18 @@ function main () {
 	done
 }
 
-if [ "$1" = "-l" ]; then
-	shift
-	main $@ 2>&1 | less 
+while getopts "fcl" "optchar"; do
+	case "$optchar" in
+		l) echo "--> mode pager"; export MGIT_MODE="pager";;
+		f) echo "--> using find"; export MGIT_LIST="find";;
+		c) echo "--> using conf"; export MGIT_LIST="conf";;
+		*) exit 1;
+	esac
+done
+shift $((OPTIND-1)) 
+
+if [ "$MGIT_MODE" = "pager" ]; then
+	main $@ 2>&1 | $MGIT_PAGER 
 else
 	main $@
 fi
