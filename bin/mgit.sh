@@ -83,13 +83,11 @@ function main () {
 				printf "$PROJECT_NAME   "
 				customOut $BRANCH_COLOR
 				printf "($BRANCH)\n"
-				customOut
-
+				customOut reset 
 				if test $# -gt 0; then 
 					echo ""
 					$GIT $@ 
 				fi
-				customOut reset
 				fillLine "_"
 			)
 		fi
