@@ -1,19 +1,43 @@
 #!/bin/bash
 
-MGIT_PAGER="less -R"
+MGIT_PAGER="less -r"
 MGIT_CONF="./mgit.conf"
 MGIT_LIST="conf"
 
 GIT="/usr/bin/git"
 
-NORMAL="\e[0m" 
-GREEN="\e[1;32m" 
-RED="\e[1;31m" 
-PINK="\e[1;35m" 
-BLUE="\e[1;34m"
-WHITE="\e[0;02m" 
-YELLOW="\e[1;33m" 
-CYAN="\e[1;36m"
+function customOut() {
+	while test $# -gt 0; do 
+		case $1 in
+			black)       tput setaf 0;;
+			red)         tput setaf 1;;
+			green) 	     tput setaf 2;;
+			yellow)      tput setaf 3;;
+			blue)        tput setaf 4;;
+			purple)      tput setaf 5;;
+			cyan)        tput setaf 6;;
+			white) 	     tput setaf 7;;
+			back-black)  tput setab 0;;
+			back-red)    tput setab 1;;
+			back-green)  tput setab 2;;
+			back-yellow) tput setab 3;;
+			back-blue)   tput setab 4;;
+			back-purple) tput setab 5;;
+			back-cyan)   tput setab 6;;
+			back-white)  tput setab 7;;
+			bold)        tput bold;;
+			halfbright)  tput dim;;
+			underline)   tput smul;;
+			nounderline) tput rmul;;
+			reverse)     tput rev;;
+			standout)    tput smso;;
+			nostandout)  tput rmso;;
+			reset)       tput sgr0;;
+			*)           tput sgr0;;
+		esac
+		shift
+	done
+}
 
 function fillLine() {
 	ITEM="$1"
@@ -47,24 +71,32 @@ function main () {
 				BRANCH=`$GIT rev-parse --abbrev-ref HEAD`
 				STATUS=`$GIT status --porcelain`
 				if test -z "$STATUS"; then 
-					BRANCH_COLOR=$GREEN
+					BRANCH_COLOR=green
 				else 
-					BRANCH_COLOR=$RED
+					BRANCH_COLOR=red
 				fi
-				
-
+				customOut reset bold
 				fillLine "="
-				printf "$YELLOW>>>  $CYAN%s$NORMAL  $BRANCH_COLOR%s$NORMAL \n" "$PROJECT_NAME" "($BRANCH)" 
+				customOut yellow
+				printf ">>>  "
+				customOut cyan
+				printf "$PROJECT_NAME   "
+				customOut $BRANCH_COLOR
+				printf "($BRANCH)\n"
+				customOut
+
 				if test $# -gt 0; then 
 					echo ""
 					$GIT $@ 
 				fi
+				customOut reset
 				fillLine "_"
 			)
 		fi
 	done
 }
 
+customOut reset halfbright purple 
 while getopts "fcl" "optchar"; do
 	case "$optchar" in
 		l) echo "--> mode pager"; export MGIT_MODE="pager";;
