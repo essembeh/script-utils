@@ -3,10 +3,9 @@
 #
 
 export FILE="$1"
-export ARGS="-n 100 -f $1"
 
 pidOfTail() {
-	ps | grep "tail $ARGS" | grep -v grep | tail -1 | awk '{print $1}'
+	ps | grep "tail .*$FILE" | grep -v grep | tail -1 | awk '{print $1}'
 }
 
 getInodeOfFile() {
@@ -14,6 +13,7 @@ getInodeOfFile() {
 }
 
 listenRoll() {
+	sleep 1
 	LI=`getInodeOfFile`
 	while true; do 
 		PID=`pidOfTail`
@@ -29,7 +29,10 @@ listenRoll() {
 
 test -e "$FILE" || exit 1
 
+
 listenRoll&
+tail -f -n 10 "$FILE"
 while true; do 
-	tail $ARGS
+	echo "----- Rolling file `date` -----"
+	tail -f -n 1000 "$FILE"
 done
