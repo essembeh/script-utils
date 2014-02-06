@@ -3,7 +3,7 @@
 #
 
 export FILE="$1"
-export ARGS="-f $1"
+export ARGS="-100f $1"
 
 pidOfTail() {
 	ps | grep "tail $ARGS" | grep -v grep | tail -1 | awk '{print $1}'
