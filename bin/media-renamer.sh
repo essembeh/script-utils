@@ -135,7 +135,7 @@ for FILE in "$@"; do
 		echo "(X)  File already exists: $OLDNAME --> $NEWNAME"
 	elif test "$OPTION_DRYRUN" = "true"; then
 		__customOut green
-		echo "(-)  dru-run $FILE --> $NEWNAME"
+		echo "(-)  dry-run $FILE --> $NEWNAME"
 	else
 		__customOut green
 		echo -n "( )  "
