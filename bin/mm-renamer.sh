@@ -4,14 +4,29 @@ HASH_BIN=sha1sum
 EXIFTOOL_BIN=exiftool
 DATE_FORMAT="%Y%m%d-%H%M%S"
 
+
+__init () {
+	$HASH_BIN --version > /dev/null 2>&1
+	if test $? -ne 0; then
+		echo "Error with hash binary: $HASH_BIN"
+		exit 1
+	fi
+	$EXIFTOOL_BIN --version > /dev/null 2>&1
+	if test $? -ne 0; then
+		echo "Error with exiftool binary: $EXIFTOOL_BIN"
+		exit 1
+	fi
+}
+
 __usage () {
 echo "NAME
-	media-renamer - Tool to rename files using exif and hash
+	mm-renamer - Tool to rename files using exif and hash
 
 USAGE
-	media-renamer --date --dry-run --hash-len=12 --lower-ext *.JPG
-	media-renamer -d -n -h 12 -l *.JPG
-	media-renamer --date --jpg *.JPG
+	mm-renamer --date --dry-run --hash-len=12 --lower-ext *.JPG
+	mm-renamer -d -n -h 12 -l *.JPG
+	mm-renamer --date --jpg *.JPG
+	mm-renamer --keep-name --date --lower-ext *.JPG
 
 OPTIONS
 	-h, --help
@@ -27,12 +42,26 @@ OPTIONS
 	
 	-h N, --hash-len=N
 		Uses N chars of the hash
+	
+	-k, --keep-name
+		Use file name instead of the hash
 
 	-l, --lower-ext
 		Lower case the extension
 	
 	--jpg, --png, --nef, --avi, --mkv, --mp4, --mov, --xml
 		Use the given extension
+	
+EXAMPLES
+	mm-renamer.sh --date test.JPEG
+	( )  test.JPEG -> ./20140224-133158_53c8d09.JPEG
+
+	mm-renamer.sh --date --keep-name --lower-ext test.JPEG
+	( )  test.JPEG -> ./20140224-133158_test.jpeg
+
+	mm-renamer.sh --date --hash-len=12 --jpg test.JPEG
+	( )  test.JPEG -> ./20140224-133158_53c8d09c2e45.jpg
+	
 "
 }
 
@@ -70,8 +99,13 @@ __customOut() {
 }
 
 _getHash () {
-	HASH=`$HASH_BIN "$1" | awk '{print $1}'`
-	if [ $OPTION_HLEN -eq 0 ]; then
+	HASH=`$HASH_BIN "$1"` 
+	if test $? -ne 0 -o -z "$HASH"; then
+		echo "Error with hash"
+		exit 1
+	fi
+	HASH=`echo "$HASH" | awk '{print $1}'`
+	if test $OPTION_HLEN -eq 0; then
 		echo $HASH
 	else
 		echo $HASH | head -c $OPTION_HLEN
@@ -82,6 +116,10 @@ _getTimeStamp () {
 	$EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null
 }
 
+
+__init 
+
+OPTION_KEEPNAME=false
 OPTION_LCEXT=false
 OPTION_DATE=false
 OPTION_DRYRUN=false
@@ -96,6 +134,8 @@ while test -n "$1"; do
 			OPTION_DATE=true ;;
 		--hash-len=?*)
 			OPTION_HLEN=${1#--hash-len=} ;;
+		--keep-name|-k)
+			OPTION_KEEPNAME=true ;;
 		-h)
 			shift; OPTION_HLEN=$1 ;;
 		--lower-ext|-l)
@@ -111,14 +151,24 @@ done
 
 __customOut reset
 for FILE in "$@"; do 
+	test ! -e "$FILE" && continue
 	DIRNAME="`dirname "$FILE"`"
 	BASENAME="`basename "$FILE"`"
 	EXTENSION="${BASENAME##*.}"
+	FILENAME="${BASENAME/%.$EXTENSION/}"
+	if test -z "$FILENAME"; then
+		FILENAME="$BASENAME"
+		EXTENSION=""
+	fi
 	TIMESTAMP=`_getTimeStamp "$FILE"` 
-	HASH=`_getHash "$FILE"` 
 	NEWNAME=""
 	test -n "$TIMESTAMP" -a "$OPTION_DATE" = "true" && NEWNAME="${TIMESTAMP}_"
-	NEWNAME="$NEWNAME$HASH"
+	if "$OPTION_KEEPNAME" = "true"; then
+		NEWNAME="$NEWNAME$FILENAME"
+	else
+		HASH=`_getHash "$FILE"` 
+		NEWNAME="$NEWNAME$HASH"
+	fi
 	if test -n "$OPTION_EXT"; then
 		NEWNAME="$NEWNAME.$OPTION_EXT"
 	elif test -n "$EXTENSION"; then
