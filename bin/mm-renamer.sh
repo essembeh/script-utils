@@ -99,10 +99,9 @@ __customOut() {
 }
 
 _getHash () {
-	HASH=`$HASH_BIN "$1"` 
+	HASH=`$HASH_BIN "$1" 2> /dev/null` 
 	if test $? -ne 0 -o -z "$HASH"; then
-		echo "Error with hash"
-		exit 1
+		return 1
 	fi
 	HASH=`echo "$HASH" | awk '{print $1}'`
 	if test $OPTION_HLEN -eq 0; then
@@ -154,6 +153,7 @@ for FILE in "$@"; do
 	test ! -e "$FILE" && continue
 	DIRNAME="`dirname "$FILE"`"
 	BASENAME="`basename "$FILE"`"
+	OLDNAME="$DIRNAME/$BASENAME"	
 	EXTENSION="${BASENAME##*.}"
 	FILENAME="${BASENAME/%.$EXTENSION/}"
 	if test -z "$FILENAME"; then
@@ -167,7 +167,11 @@ for FILE in "$@"; do
 		NEWNAME="$NEWNAME$FILENAME"
 	else
 		HASH=`_getHash "$FILE"` 
-		NEWNAME="$NEWNAME$HASH"
+		if test -z "$HASH"; then
+			__customOut blue 
+			echo "(/)  Cannot compute hash for: $OLDNAME"
+			continue
+		fi
 	fi
 	if test -n "$OPTION_EXT"; then
 		NEWNAME="$NEWNAME.$OPTION_EXT"
@@ -176,7 +180,6 @@ for FILE in "$@"; do
 		NEWNAME="$NEWNAME.$EXTENSION"
 	fi
 	NEWNAME="$DIRNAME/$NEWNAME"
-	OLDNAME="$DIRNAME/$BASENAME"	
 	if test "$OLDNAME" = "$NEWNAME"; then
 		__customOut reset
 		echo "(!)  Already named: $OLDNAME"
