@@ -46,10 +46,11 @@ fi
 
 for FILE in "$@"; do 
 	if test -f "$FILE"; then 
-		DESTINATION="${FILE%.*}"
-		test -e "$DESTINATION" && DESTINATION="$FILE.d"
-		test -e "$DESTINATION" && DESTINATION="$FILE.$$"
-		test -e "$DESTINATION" && DESTINATION="$FILE.$RANDOM"
+		BASENAME=`basename "$FILE"`
+		DESTINATION="${BASENAME%.*}"
+		test -e "$DESTINATION" && DESTINATION="$BASENAME"
+		test -e "$DESTINATION" && DESTINATION="$BASENAME$$"
+		test -e "$DESTINATION" && DESTINATION="$BASENAME$RANDOM"
 		test -e "$DESTINATION" && DESTINATION=`mktemp -d`
 		if test -d "$DESTINATION"; then
 			__customOut reset red	
