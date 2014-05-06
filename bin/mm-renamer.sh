@@ -172,6 +172,7 @@ for FILE in "$@"; do
 			echo "(/)  Cannot compute hash for: $OLDNAME"
 			continue
 		fi
+		NEWNAME="$NEWNAME$HASH"
 	fi
 	if test -n "$OPTION_EXT"; then
 		NEWNAME="$NEWNAME.$OPTION_EXT"
