@@ -43,11 +43,6 @@ __customOut() {
     done
 }
 
-
-##
-## Checks
-##
-
 ##
 ## Process file
 ##
@@ -81,8 +76,13 @@ __processFile () {
 		__customOut green 
 		test $OPTION_VERBOSE -ge 1 && echo "$FILE_TO_PROCESS  ... OK"
 	elif test $RC -eq 1; then
-		__customOut red
-		echo "$FILE_TO_PROCESS  ... No subtitle"
+		if test $OPTION_VERBOSE -eq 0; then
+			__customOut reset
+			echo "$FILE_TO_PROCESS"
+		else
+			__customOut red
+			echo "$FILE_TO_PROCESS  ... No subtitle"
+		fi
 	else
 		__customOut cyan
 		test $OPTION_VERBOSE -ge 2 && echo "$FILE_TO_PROCESS  --> Not a movie"
