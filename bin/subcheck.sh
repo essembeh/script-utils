@@ -1,134 +1,117 @@
-#!/bin/sh
-
-##
-## Binaries
-##
-GREP_BIN=`which egrep` || exit 1
-SED_BIN=`which sed` || exit 1
+#!/bin/bash
 
 ##
 ## Extensions
 ##
-MOVIE_EXTENSIONS="avi mkv mpg mpeg mp4 mov"
-SRT_EXTENSIONS="srt sub idx"
+MOVIE_EXTENSIONS="avi mkv mpg mpeg mp4 mov m4v AVI MKV MPG MPEG MP4 MOV M4V"
+SRT_EXTENSIONS="srt SRT"
+
 
 ##
-## Options
+## Colors
 ##
-SHOW_ERROR="true"
-SHOW_MISSING="true"
-SHOW_ORPHAN="true"
-QUIET="false"
+__customOut() {
+    while test $# -gt 0; do
+        case $1 in
+            black)       tput setaf 0;;
+            red)         tput setaf 1;;
+            green)       tput setaf 2;;
+            yellow)      tput setaf 3;;
+            blue)        tput setaf 4;;
+            purple)      tput setaf 5;;
+            cyan)        tput setaf 6;;
+            white)       tput setaf 7;;
+            back-black)  tput setab 0;;
+            back-red)    tput setab 1;;
+            back-green)  tput setab 2;;
+            back-yellow) tput setab 3;;
+            back-blue)   tput setab 4;;
+            back-purple) tput setab 5;;
+            back-cyan)   tput setab 6;;
+            back-white)  tput setab 7;;
+            bold)        tput bold;;
+            halfbright)  tput dim;;
+            underline)   tput smul;;
+            nounderline) tput rmul;;
+            reverse)     tput rev;;
+            standout)    tput smso;;
+            nostandout)  tput rmso;;
+            reset)       tput sgr0;;
+            *)           tput sgr0;;
+        esac
+        shift
+    done
+}
+
+
+##
+## Checks
+##
 
 ##
 ## Process file
 ##
-__processFile () {
-	theFile="$1"
-	if [ "$SHOW_MISSING" = "true" ]; then
-		for currentExtension in $MOVIE_EXTENSIONS; do 
-			if echo "$theFile" | $GREP_BIN -q "$currentExtension$"; then
-				if __findMissing "$theFile"; then
-					return 0
-				else
-					test "$QUIET" = "true" || echo -n "[missing] "
-					echo "$theFile"
-					return 1
-				fi
-			fi
-		done
-	fi
-	if [ "$SHOW_ORPHAN" = "true" ]; then
-		for currentExtension in $SRT_EXTENSIONS; do 
-			if echo "$theFile" | $GREP_BIN -q "$currentExtension$"; then
-				if __findOrphan "$theFile"; then
-					return 0
-				else
-					test "$QUIET" = "true" || echo -n "[orphan]  "
-					echo "$theFile"
-					return 1
-				fi
-			fi
-		done
-	fi
-	if [ "$SHOW_ERROR" = "true" ]; then   
-		test "$QUIET" = "true" || echo -n "[error]   "
-		echo "$theFile"
-	fi
-	return 2
-}
+__testFile () {
+	local VIDEO_FILE="$1"
+	local DIRNAME="`dirname "$VIDEO_FILE"`"
+	local BASENAME="`basename "$VIDEO_FILE"`"
+	local EXTENSION="${BASENAME##*.}"
+	local FILENAME="${BASENAME/%.$EXTENSION/}"
 
-##
-## Find SRT for given file
-##
-__findMissing () {
-	movieFile="$1"
-	for currentExtension in $SRT_EXTENSIONS; do 
-		srtFile=`echo "$movieFile" | $SED_BIN -r "s/[[:alnum:]]+$/$currentExtension/"`
-		test -f "$srtFile" && return 0
-	done
-	return 1
-}
-
-##
-## Find movie for given srt
-##
-__findOrphan () {
-	srtFile="$1"
-	for currentExtension in $MOVIE_EXTENSIONS; do 
-		movieFile=`echo "$srtFile" | $SED_BIN -r "s/[[:alnum:]]+$/$currentExtension/"`
-		test -f "$movieFile" && return 0
-	done
-	return 1
-}
-
-##
-## Process folder
-##
-__processFolder () {
-	folder="$1"
-	find "$folder" -type f | sort | while read currentFile; do
-		__processFile "$currentFile"
-	done
-}
-
-## 
-## Main
-##
-__main () {
-	for currentArg in "$@"; do
-		if [ -d "$currentArg" ]; then
-			__processFolder "$currentArg"
-		else
-			__processFile "$currentArg"
+	local IS_VIDEO=false
+	for MOVIE_EXTENSION in $MOVIE_EXTENSIONS; do
+		if test "$MOVIE_EXTENSION" = "$EXTENSION"; then
+			IS_VIDEO=true
+			break
 		fi
 	done
+	test $IS_VIDEO = true || return 2
+	for SRT_EXTENSION in $SRT_EXTENSIONS; do
+		local SRT_FILE="$DIRNAME/$FILENAME.$SRT_EXTENSION"
+		test -f "$SRT_FILE" && return 0
+	done
+	return 1
 }
 
-endOfLoop="false"
-while [ "$endOfLoop" = "false" ]; do 
-	case "$1" in 
-		"-o" | "--only-orphan")
-			SHOW_ORPHAN="true"
-			SHOW_MISSING="false"
-			SHOW_ERROR="false"
-			shift;;
-		"-m" | "--only-missing")
-			SHOW_ORPHAN="false"
-			SHOW_MISSING="true"
-			SHOW_ERROR="false"
-			shift;;
-		"-e" | "--only-error")
-			SHOW_ORPHAN="false"
-			SHOW_MISSING="false"
-			SHOW_ERROR="true"
-			shift;;
-		"-q" | "--quiet")
-			QUIET="true"
-			shift;;
-		*)
-			endOfLoop="true";;
+__processFile () {
+	local FILE_TO_PROCESS="$1"	
+	__testFile "$FILE_TO_PROCESS"
+	local RC=$?
+	if test $RC -eq 0; then
+		__customOut green 
+		test $OPTION_VERBOSE -ge 1 && echo "$FILE_TO_PROCESS  ... OK"
+	elif test $RC -eq 1; then
+		__customOut red
+		echo "$FILE_TO_PROCESS  ... No subtitle"
+	else
+		__customOut cyan
+		test $OPTION_VERBOSE -ge 2 && echo "$FILE_TO_PROCESS  --> Not a movie"
+	fi
+}
+
+##
+## Main
+##
+OPTION_VERBOSE=1
+while test -n "$1"; do
+	case $1 in
+		-q|--quiet) OPTION_VERBOSE=0 ;;
+		-v|--verbose) OPTION_VERBOSE=2 ;;
+		*) break ;;
 	esac
+	shift
 done
 
-__main "$@"
+for FILE in "$@"; do
+	if test -f "$FILE"; then
+		__processFile "$FILE"
+	elif test -d "$FILE"; then
+		find "$FILE" -type f | sort | while read LINE; do 
+			__processFile "$LINE"
+		done
+	else
+		__customOut cyan
+		test $OPTION_VERBOSE -ge 1 &&  echo "$FILE  --> Invalid file"
+	fi
+done
+
