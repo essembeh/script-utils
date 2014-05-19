@@ -5,7 +5,6 @@ set -e
 ##
 ## Binaries
 ##
-AWK_BIN=awk
 SED_BIN=sed
 MKTEMP_BIN=mktemp
 SEQ_BIN=seq
@@ -57,8 +56,8 @@ fi
 if test -z "$EDITOR"; then
 	export EDITOR=vim
 fi
-TEMP_FILE_A=`$MKTEMP_BIN` || __error "Error with mktemp"
-TEMP_FILE_B=`$MKTEMP_BIN` || __error "Error with mktemp"
+TEMP_FILE_A=$($MKTEMP_BIN) || __error "Error with mktemp"
+TEMP_FILE_B=$($MKTEMP_BIN) || __error "Error with mktemp"
 for CURRENT_ARG in "$@"; do 
 	if test -e "$CURRENT_ARG"; then
 		echo "$CURRENT_ARG" >> "$TEMP_FILE_A"
@@ -66,18 +65,18 @@ for CURRENT_ARG in "$@"; do
 	fi
 done
 $EDITOR "$TEMP_FILE_B" 
-LINE_COUNT_A=$(wc -l "$TEMP_FILE_A" | $AWK_BIN '{print $1}') 
-LINE_COUNT_B=$(wc -l "$TEMP_FILE_B" | $AWK_BIN '{print $1}')
-test $LINE_COUNT_A -eq $LINE_COUNT_B
-for INDEX in `$SEQ_BIN 1 $LINE_COUNT_A`; do 
-	CURRENT_FILE_A="`$SED_BIN -n ${INDEX}p < "$TEMP_FILE_A"`"
-	CURRENT_FILE_B="`$SED_BIN -n ${INDEX}p < "$TEMP_FILE_B"`"
+LINE_COUNT_A=$(wc -l "$TEMP_FILE_A" | awk '{print $1}') 
+LINE_COUNT_B=$(wc -l "$TEMP_FILE_B" | awk '{print $1}')
+test "$LINE_COUNT_A" = "$LINE_COUNT_B"
+for INDEX in $($SEQ_BIN 1 "$LINE_COUNT_A"); do 
+	CURRENT_FILE_A="$($SED_BIN -n "${INDEX}p" < "$TEMP_FILE_A")"
+	CURRENT_FILE_B="$($SED_BIN -n "${INDEX}p" < "$TEMP_FILE_B")"
 	if test "$CURRENT_FILE_A" = "$CURRENT_FILE_B"; then
 		continue
 	fi
 	## Check path
-	DIRNAME_A=`dirname "$CURRENT_FILE_A"`
-	DIRNAME_B=`dirname "$CURRENT_FILE_B"`
+	DIRNAME_A="$(dirname "$CURRENT_FILE_A")"
+	DIRNAME_B="$(dirname "$CURRENT_FILE_B")"
 	if test ! "$DIRNAME_A" = "$DIRNAME_B"; then
 		__customOut reset red
 		echo "Different dirnames, do nothing for file: $CURRENT_FILE_A"

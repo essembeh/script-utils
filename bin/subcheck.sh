@@ -48,8 +48,8 @@ __customOut() {
 ##
 __testFile () {
 	local VIDEO_FILE="$1"
-	local DIRNAME="`dirname "$VIDEO_FILE"`"
-	local BASENAME="`basename "$VIDEO_FILE"`"
+	local DIRNAME="$(dirname "$VIDEO_FILE")"
+	local BASENAME="$(basename "$VIDEO_FILE")"
 	local EXTENSION="${BASENAME##*.}"
 	local FILENAME="${BASENAME/%.$EXTENSION/}"
 
@@ -74,18 +74,18 @@ __processFile () {
 	local RC=$?
 	if test $RC -eq 0; then
 		__customOut green 
-		test $OPTION_VERBOSE -ge 1 && echo "$FILE_TO_PROCESS  ... OK"
+		test "$OPTION_VERBOSE" -ge 1 && echo "$FILE_TO_PROCESS ... OK"
 	elif test $RC -eq 1; then
-		if test $OPTION_VERBOSE -eq 0; then
+		if test "$OPTION_VERBOSE" -eq 0; then
 			__customOut reset
 			echo "$FILE_TO_PROCESS"
 		else
 			__customOut red
-			echo "$FILE_TO_PROCESS  ... No subtitle"
+			echo "$FILE_TO_PROCESS ... No subtitle"
 		fi
 	else
 		__customOut cyan
-		test $OPTION_VERBOSE -ge 2 && echo "$FILE_TO_PROCESS  --> Not a movie"
+		test "$OPTION_VERBOSE" -ge 2 && echo "$FILE_TO_PROCESS --> Not a movie"
 	fi
 }
 
@@ -111,7 +111,7 @@ for FILE in "$@"; do
 		done
 	else
 		__customOut cyan
-		test $OPTION_VERBOSE -ge 1 &&  echo "$FILE  --> Invalid file"
+		test $OPTION_VERBOSE -ge 1 &&  echo "$FILE --> Invalid file"
 	fi
 done
 

@@ -98,20 +98,20 @@ __customOut() {
     done
 }
 
-_getHash () {
-	HASH=`$HASH_BIN "$1" 2> /dev/null` 
+__getHash () {
+	HASH=$($HASH_BIN "$1" 2> /dev/null)
 	if test $? -ne 0 -o -z "$HASH"; then
 		return 1
 	fi
-	HASH=`echo "$HASH" | awk '{print $1}'`
-	if test $OPTION_HLEN -eq 0; then
-		echo $HASH
+	HASH=$(echo "$HASH" | awk '{print $1}')
+	if test "$OPTION_HLEN" -eq 0; then
+		echo "$HASH"
 	else
-		echo $HASH | head -c $OPTION_HLEN
+		echo "$HASH" | head -c "$OPTION_HLEN"
 	fi
 }
 
-_getTimeStamp () {
+__getTimeStamp () {
 	$EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null
 }
 
@@ -150,9 +150,13 @@ done
 
 __customOut reset
 for FILE in "$@"; do 
-	test ! -e "$FILE" && continue
-	DIRNAME="`dirname "$FILE"`"
-	BASENAME="`basename "$FILE"`"
+	if test ! -e "$FILE"; then
+		__customOut blue
+		echo "(/)  Problem with: $FILE"
+		continue
+	fi
+	DIRNAME=$(dirname "$FILE")
+	BASENAME=$(basename "$FILE")
 	OLDNAME="$DIRNAME/$BASENAME"	
 	EXTENSION="${BASENAME##*.}"
 	FILENAME="${BASENAME/%.$EXTENSION/}"
@@ -160,13 +164,13 @@ for FILE in "$@"; do
 		FILENAME="$BASENAME"
 		EXTENSION=""
 	fi
-	TIMESTAMP=`_getTimeStamp "$FILE"` 
+	TIMESTAMP=$(__getTimeStamp "$FILE")
 	NEWNAME=""
 	test -n "$TIMESTAMP" -a "$OPTION_DATE" = "true" && NEWNAME="${TIMESTAMP}_"
 	if "$OPTION_KEEPNAME" = "true"; then
 		NEWNAME="$NEWNAME$FILENAME"
 	else
-		HASH=`_getHash "$FILE"` 
+		HASH=$(__getHash "$FILE")
 		if test -z "$HASH"; then
 			__customOut blue 
 			echo "(/)  Cannot compute hash for: $OLDNAME"
@@ -177,7 +181,7 @@ for FILE in "$@"; do
 	if test -n "$OPTION_EXT"; then
 		NEWNAME="$NEWNAME.$OPTION_EXT"
 	elif test -n "$EXTENSION"; then
-		test "$OPTION_LCEXT" = "true" && EXTENSION="`echo -n "$EXTENSION" | awk '{print tolower($1)}'`"
+		test "$OPTION_LCEXT" = "true" && EXTENSION=$(echo -n "$EXTENSION" | awk '{print tolower($1)}')
 		NEWNAME="$NEWNAME.$EXTENSION"
 	fi
 	NEWNAME="$DIRNAME/$NEWNAME"

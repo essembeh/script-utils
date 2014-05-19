@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AUNPACK=`which aunpack` || exit 1
+AUNPACK="aunpack" 
 AUNPACK_ARGS="--quiet"
 
 set -e
@@ -46,12 +46,12 @@ fi
 
 for FILE in "$@"; do 
 	if test -f "$FILE"; then 
-		BASENAME=`basename "$FILE"`
+		BASENAME="$(basename "$FILE")"
 		DESTINATION="${BASENAME%.*}"
 		test -e "$DESTINATION" && DESTINATION="$BASENAME"
 		test -e "$DESTINATION" && DESTINATION="$BASENAME$$"
 		test -e "$DESTINATION" && DESTINATION="$BASENAME$RANDOM"
-		test -e "$DESTINATION" && DESTINATION=`mktemp -d`
+		test -e "$DESTINATION" && DESTINATION="$(mktemp -d)"
 		if test -d "$DESTINATION"; then
 			__customOut reset red	
 			echo "Folder already exists: $DESTINATION"

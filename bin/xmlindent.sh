@@ -1,20 +1,22 @@
 #!/bin/bash
 
+set -e
+
 ##
 ## Binaries
 ##
-CAT_BIN=`which cat` || exit 1
-RM_BIN=`which rm` || exit 1
-MV_BIN=`which mv` || exit 1
-MKTEMP_BIN=`which mktemp` || exit 1
-XSLTPROC_BIN=`which xsltproc` || exit 1
-HEAD_BIN=`which head` || exit 1
-GREP_BIN=`which egrep` || exit 1
+CAT_BIN="$(which cat)"
+RM_BIN="$(which rm)"
+MV_BIN="$(which mv)"
+MKTEMP_BIN="$(which mktemp)"
+XSLTPROC_BIN="$(which xsltproc)"
+HEAD_BIN="$(which head)"
+GREP_BIN="$(which egrep)"
 
 ##
 ## XSL indentation file
 ##
-XSL_FILE=`$MKTEMP_BIN` || exit 2
+XSL_FILE="$($MKTEMP_BIN)"
 $CAT_BIN << EOF > $XSL_FILE
 <?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -38,18 +40,18 @@ __isXmlFile () {
 ##
 ## Main
 ##
-for currentFile in "$@"; do
-	if __isXmlFile "$currentFile"; then
-		tmpFile=`$MKTEMP_BIN` || exit 3
-		echo "Indent $currentFile (backup: $tmpFile)"
-		$MV_BIN "$currentFile" "$tmpFile"
-		$XSLTPROC_BIN "$XSL_FILE" "$tmpFile" > "$currentFile" 2> /dev/null
+for CURRENT_FILE in "$@"; do
+	if __isXmlFile "$CURRENT_FILE"; then
+		TEMP_FILE="$($MKTEMP_BIN)"
+		echo "Indent $CURRENT_FILE (backup: $TEMP_FILE)"
+		$MV_BIN "$CURRENT_FILE" "$TEMP_FILE"
+		$XSLTPROC_BIN "$XSL_FILE" "$TEMP_FILE" > "$CURRENT_FILE" 2> /dev/null
 		if [ ! $? -eq 0 ]; then
-			echo "   Error with XSLTPROC, revert changes on file: $currentFile"
-			$MV_BIN "$tmpFile" "$currentFile"
+			echo "   Error with XSLTPROC, revert changes on file: $CURRENT_FILE"
+			$MV_BIN "$TEMP_FILE" "$CURRENT_FILE"
 		fi
 	else
-		echo "*** File does not seem to be a valid XML file: $currentFile"
+		echo "*** File does not seem to be a valid XML file: $CURRENT_FILE"
 	fi
 done
 

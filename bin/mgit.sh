@@ -44,14 +44,14 @@ function fillLine() {
 	if test -z "$ITEM"; then
 		echo ""
 	else
-		WIDTH=`tput cols` 
-		ITEMLEN=`printf "$ITEM" | wc -m`
-		if test $ITEMLEN -gt $WIDTH; then 
-			printf "$ITEM\n"
+		WIDTH=$(tput cols)
+		ITEMLEN=$(printf "%s" "$ITEM" | wc -m)
+		if test "$ITEMLEN" -gt "$WIDTH"; then 
+			printf "%s\n" "$ITEM"
 		else 
-			COUNT=$(($WIDTH / $ITEMLEN))
-			for I in `seq 1 $COUNT`; do
-				printf "$ITEM"
+			COUNT=$((WIDTH / ITEMLEN))
+			for I in $(seq 1 $COUNT); do
+				printf "%s" "$ITEM"
 			done
 			printf "\n"
 		fi
@@ -60,16 +60,16 @@ function fillLine() {
 
 function main () {
 	if test "$MGIT_LIST" = "conf" && test -f "$MGIT_CONF"; then
-		LIST=`cat "$MGIT_CONF"`
+		LIST=$(cat "$MGIT_CONF")
 	else
-		LIST=`find -L . -name ".git" -type d -exec dirname {} \; | sort`
+		LIST=$(find -L . -name ".git" -type d -exec dirname {} \; | sort)
 	fi 
 	for PROJECT_FOLDER in $LIST; do 
 		if test -d "$PROJECT_FOLDER"; then
 			(cd "$PROJECT_FOLDER"
-				PROJECT_NAME=`basename "$PROJECT_FOLDER"`
-				BRANCH=`$GIT rev-parse --abbrev-ref HEAD`
-				STATUS=`$GIT status --porcelain`
+				PROJECT_NAME="$(basename "$PROJECT_FOLDER")"
+				BRANCH="$($GIT rev-parse --abbrev-ref HEAD)"
+				STATUS="$($GIT status --porcelain)"
 				if test -z "$STATUS"; then 
 					BRANCH_COLOR=green
 				else 
@@ -80,13 +80,13 @@ function main () {
 				customOut yellow
 				printf ">>>  "
 				customOut cyan
-				printf "$PROJECT_NAME   "
+				printf "%s   " "$PROJECT_NAME"
 				customOut $BRANCH_COLOR
-				printf "($BRANCH)\n"
+				printf "(%s)\n" "$BRANCH"
 				customOut reset 
 				if test $# -gt 0; then 
 					echo ""
-					$GIT $@ 
+					$GIT "$@"
 				fi
 				fillLine "_"
 			)
@@ -106,7 +106,7 @@ done
 shift $((OPTIND-1)) 
 
 if [ "$MGIT_MODE" = "pager" ]; then
-	main $@ 2>&1 | $MGIT_PAGER 
+	main "$@" 2>&1 | $MGIT_PAGER 
 else
-	main $@
+	main "$@"
 fi
