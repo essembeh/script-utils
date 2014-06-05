@@ -2,13 +2,14 @@
 
 set -e
 
+FOLDER_EXT=".rdiff-backup"
+
 RDIFFBACKUP="rdiff-backup"
 if ! "$RDIFFBACKUP" --version > /dev/null 2>&1; then
 	echo "Cannot find rdiff-backup"
 	exit 1
 fi
 
-FOLDER_EXT=".rdiff-backup"
 
 CONF_FILE="$1"; shift
 if test -f "$CONF_FILE"; then
@@ -17,14 +18,12 @@ else
 	echo "Configuration file is not valid"
 	exit 1
 fi
+cd "$(dirname "$CONF_FILE")"
 
-cat "$CONF_FILE" | grep "^[^#]" | while read SOURCE TARGET_DIR OPTIONS; do 
+cat $(basename "$CONF_FILE") | grep "^[^#]" | while read SOURCE TARGET_DIR OPTIONS; do 
 	if test -z "$SOURCE" -o -z "$TARGET_DIR"; then
 		echo "Problem with configuration file"
 		continue
-	fi
-	if test "${SOURCE:0:2}" = "./"; then
-		SOURCE="$(dirname "$CONF_FILE")/${SOURCE:2}"
 	fi
 	SOURCE_BASENAME=$(basename "$SOURCE")
 	test -n "$SOURCE_BASENAME"
