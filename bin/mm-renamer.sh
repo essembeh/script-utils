@@ -112,7 +112,10 @@ __getHash () {
 }
 
 __getTimeStamp () {
-	$EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null
+	OUT=$($EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
+	test -z "$OUT" && \
+		OUT=$($EXIFTOOL_BIN -modifyDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
+	echo "$OUT"
 }
 
 
