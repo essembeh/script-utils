@@ -3,6 +3,7 @@
 set -e
 
 FOLDER_EXT=".rdiff-backup"
+REMOVE_ARG="--remove-older-than"
 
 RDIFFBACKUP="rdiff-backup"
 if ! "$RDIFFBACKUP" --version > /dev/null 2>&1; then
@@ -32,6 +33,11 @@ cat $(basename "$CONF_FILE") | grep "^[^#]" | while read SOURCE TARGET_DIR OPTIO
 		continue
 	fi
 	TARGET="$TARGET_DIR/$SOURCE_BASENAME$FOLDER_EXT"
-	echo "Backup: $SOURCE --> $TARGET ($OPTIONS)"
-	rdiff-backup $OPTIONS "$SOURCE" "$TARGET"
+	if [[ "$OPTIONS" =~ "$REMOVE_ARG" ]]; then
+		echo "Cleaning: $TARGET ($OPTIONS)"
+		rdiff-backup $OPTIONS "$TARGET"
+	else
+		echo "Backup: $SOURCE --> $TARGET ($OPTIONS)"
+		rdiff-backup $OPTIONS "$SOURCE" "$TARGET"
+	fi
 done
