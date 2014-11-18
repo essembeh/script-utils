@@ -1,12 +1,16 @@
+# subdl
 
-NAME
+### NAME
+
     subdl - Subtitle downloader version 1.1
 
-USAGE
-    subdl --verbose --(no)force --(no)autopack --(no)autosrt --(no)clean 
-           --(no)utf8 --site=(steu|tvnet) --lang=(fr|en) <EPISODE> ...
+### USAGE
 
-OPTIONS
+    subdl --verbose --(no)force --(no)autopack --(no)autosrt --(no)clean 
+          --(no)utf8 --site=(steu|tvnet) --lang=(fr|en) <EPISODE> ...
+           
+### OPTIONS
+
     --help
         Diplay this message.
 
@@ -47,13 +51,15 @@ OPTIONS
         default=fr
         The lang of the subtitles to fetch.
 
-EXAMPLES
+### EXAMPLES
+
     subdl --force --verbose --clean My.Serie.S02E04.mkv
         Automatically try to download subtitles for the episode 2x04.
         Then choose the better one. 
         Finally, the srt file will get its tags removed.
         Note: if a My.Serie.S02E04.srt already exists, it will be overwritten.
 
-COPYRIGHT
+### COPYRIGHT
+
     Copyright 2011 essembeh.org
     Licence GPLv2.
