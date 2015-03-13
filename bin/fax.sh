@@ -92,6 +92,13 @@ __extractHere() {
 			__customOut reset
 			7z x "$FILE"
 			;;
+		*.deb)
+			__testCommand ar tar
+			echo "Undeb: $FILE -->  $PWD"
+			__customOut reset
+			ar vx "$FILE"
+			tar vfax "data.tar.xz" 
+			;;
 		*)
 			__testCommand aunpack
 			echo "Aunpack: $FILE  -->  $PWD"
