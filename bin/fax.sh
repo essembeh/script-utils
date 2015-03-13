@@ -38,30 +38,75 @@ __customOut() {
     done
 }
 
-$AUNPACK --version > /dev/null 2>&1
-if test $? -ne 0; then
-	echo "Cannot find atools"
-	exit 1
-fi
+
+__testCommand() {
+	while test -n "$1"; do
+		if ! "$1" --help > /dev/null 2> /dev/null; then
+			__customOut bold red
+			echo "Missing command: $1"
+			exit 1
+		fi
+		shift
+	done
+}
+
+__cdCleanFolder() {
+	FILE="$1"
+	BASENAME=`basename "$FILE"`
+	FILENAME="${BASENAME%.*}"
+	[[ $FILENAME =~ .tar$ ]] && FILENAME=${FILENAME%.tar}
+	test -n "$FILENAME"
+	DESTINATION="$FILENAME"
+	test ! -e "$DESTINATION" || DESTINATION="${FILENAME}.d"
+	test ! -e "$DESTINATION" || DESTINATION="${FILENAME}.$RANDOM"
+	test ! -e "$DESTINATION" 
+	mkdir -p "$DESTINATION"
+	cd "$DESTINATION"
+}
+
+__extractHere() {
+	FILE="$1"
+	__customOut bold back-blue yellow
+	case "$FILE" in
+		*.zip)
+			__testCommand unzip
+			echo "Unzip: $FILE  -->  $PWD"
+			__customOut reset
+			unzip "$FILE"
+			;;
+		*.tar|*.tar.gz|*.tgz|*.tar.bz2|*.tar.xz)
+			__testCommand tar
+			echo "Untar: $FILE  -->  $PWD"
+			__customOut reset
+			tar vfax "$FILE"
+			;;
+		*.rar)
+			__testCommand unrar
+			echo "Unrar: $FILE  -->  $PWD"
+			__customOut reset
+			unrar x -kb "$FILE"
+			;;
+		*.7z)
+			__testCommand 7z
+			echo "Un7z: $FILE  -->  $PWD"
+			__customOut reset
+			7z x "$FILE"
+			;;
+		*)
+			__testCommand aunpack
+			echo "Aunpack: $FILE  -->  $PWD"
+			__customOut reset
+			aunpack "$FILE"
+			;;
+	esac
+}
+
+__testCommand realpath 
 
 for FILE in "$@"; do 
 	if test -f "$FILE"; then 
-		BASENAME="$(basename "$FILE")"
-		DESTINATION="${BASENAME%.*}"
-		test -e "$DESTINATION" && DESTINATION="$BASENAME"
-		test -e "$DESTINATION" && DESTINATION="$BASENAME$$"
-		test -e "$DESTINATION" && DESTINATION="$BASENAME$RANDOM"
-		test -e "$DESTINATION" && DESTINATION="$(mktemp -d)"
-		if test -d "$DESTINATION"; then
-			__customOut reset red	
-			echo "Folder already exists: $DESTINATION"
-			__customOut reset
-		else 
-			mkdir "$DESTINATION" 
-		fi
-		echo -n "Extracting $FILE --> $DESTINATION ... "
-		$AUNPACK $AUNPACK_ARGS -X "$DESTINATION" "$FILE"
-		echo "done"
+		REALPATH=`realpath "$FILE"`
+		(__cdCleanFolder "$FILE" && __extractHere "$REALPATH")
 	fi
 done
 
