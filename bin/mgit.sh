@@ -62,36 +62,41 @@ function main () {
 	if test "$MGIT_LIST" = "conf" && test -f "$MGIT_CONF"; then
 		LIST=$(cat "$MGIT_CONF")
 	else
-		LIST=$(find -L . -name ".git" -type d -exec dirname {} \; | sort)
+		LIST=$(find -L . -mindepth 2 -maxdepth 2 -name ".git" -type d -exec dirname {} \; | sort)
 	fi 
-	for PROJECT_FOLDER in $LIST; do 
-		if test -d "$PROJECT_FOLDER"; then
-			(cd "$PROJECT_FOLDER"
-				PROJECT_NAME="$(basename "$PROJECT_FOLDER")"
-				BRANCH="$($GIT rev-parse --abbrev-ref HEAD)"
-				STATUS="$($GIT status --porcelain)"
-				if test -z "$STATUS"; then 
-					BRANCH_COLOR=green
-				else 
-					BRANCH_COLOR=red
-				fi
-				customOut reset bold
-				fillLine "="
-				customOut yellow
-				printf ">>>  "
-				customOut cyan
-				printf "%s   " "$PROJECT_NAME"
-				customOut $BRANCH_COLOR
-				printf "(%s)\n" "$BRANCH"
-				customOut reset 
-				if test $# -gt 0; then 
-					echo ""
-					$GIT "$@"
-				fi
-				fillLine "_"
-			)
-		fi
-	done
+	if test -z "$LIST"; then
+		customOut red bold back-white
+		echo "Cannot find any git repository in this folder"
+	else
+		for PROJECT_FOLDER in $LIST; do 
+			if test -d "$PROJECT_FOLDER"; then
+				(cd "$PROJECT_FOLDER"
+					PROJECT_NAME="$(basename "$PROJECT_FOLDER")"
+					BRANCH="$($GIT rev-parse --abbrev-ref HEAD)"
+					STATUS="$($GIT status --porcelain)"
+					if test -z "$STATUS"; then 
+						BRANCH_COLOR=green
+					else 
+						BRANCH_COLOR=red
+					fi
+					customOut reset bold
+					fillLine "="
+					customOut yellow
+					printf ">>>  "
+					customOut cyan
+					printf "%s   " "$PROJECT_NAME"
+					customOut $BRANCH_COLOR
+					printf "(%s)\n" "$BRANCH"
+					customOut reset 
+					if test $# -gt 0; then 
+						echo ""
+						$GIT "$@"
+					fi
+					fillLine "_"
+				)
+			fi
+		done
+	fi
 }
 
 customOut reset halfbright purple 
