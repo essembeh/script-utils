@@ -190,16 +190,15 @@ for FILE in "$@"; do
 	NEWNAME="$DIRNAME/$NEWNAME"
 	if test "$OLDNAME" = "$NEWNAME"; then
 		__customOut reset
-		echo "(!)  Already named: $OLDNAME"
+		echo "Already named: $OLDNAME"
+	elif test "$OPTION_DRYRUN" = "true"; then
+		__customOut yellow
+		echo "dry-run $FILE --> $NEWNAME"
 	elif test -f "$NEWNAME"; then
 		__customOut red
-		echo "(X)  File already exists: $OLDNAME --> $NEWNAME"
-	elif test "$OPTION_DRYRUN" = "true"; then
-		__customOut green
-		echo "(-)  dry-run $FILE --> $NEWNAME"
+		mv -n -v "$FILE" "$NEWNAME.$RANDOM"
 	else
 		__customOut green
-		echo -n "( )  "
 		mv -n -v "$FILE" "$NEWNAME"
 	fi
 done
