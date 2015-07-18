@@ -58,11 +58,11 @@ function fillLine() {
 	fi
 }
 
-function main () {
+function main {
 	if test "$MGIT_LIST" = "conf" && test -f "$MGIT_CONF"; then
 		LIST=$(cat "$MGIT_CONF")
 	else
-		LIST=$(find -L . -mindepth 2 -maxdepth 2 -name ".git" -type d -exec dirname {} \; | sort)
+		LIST=$(find -L . -mindepth 2 -maxdepth 2 -name ".git" -exec dirname {} \; | sort)
 	fi 
 	if test -z "$LIST"; then
 		customOut red bold back-white
