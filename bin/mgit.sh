@@ -6,7 +6,7 @@ MGIT_LIST="conf"
 
 GIT="/usr/bin/git"
 
-function customOut() {
+function customOut {
 	while test $# -gt 0; do 
 		case $1 in
 			black)       tput setaf 0;;
@@ -39,7 +39,7 @@ function customOut() {
 	done
 }
 
-function fillLine() {
+function fillLine {
 	ITEM="$1"
 	if test -z "$ITEM"; then
 		echo ""
