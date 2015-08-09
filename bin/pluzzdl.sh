@@ -153,10 +153,11 @@ __downloadVideos () {
 			local TMP_VIDEO="$TMP_DIR/$ID.$VIDEO_EXTENSION"
 			local TMP_LOG="$TMP_DIR/$ID.log"
 			local DB_FILE="$DB_DIR/$ID"
+			local DB_FILE2="$DB_DIR/$ID.gz"
 			
 			rm -rf "$TMP_DIR"
 			
-			if test -e "$DB_FILE"; then
+			if test -e "$DB_FILE" -o -e "$DB_FILE2"; then
 				__customOut reset blue
 				echo "Video already downloaded: [$ID] $TITRE1/$TITRE2"
 			elif test -f "$TARGET_VIDEO"; then
