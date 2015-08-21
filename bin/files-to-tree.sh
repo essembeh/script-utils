@@ -27,6 +27,9 @@ OPTIONS:
 	-h, --help
 		Display this message.
 
+  -n, --dry-run
+		Only display new names, does not create any folder nor move any file.
+
 	-a, --all
 		Rename all files taht contains the motif.
 		By default only files with jpg extension are processed.
@@ -83,7 +86,25 @@ __customOut() {
     done
 }
 
+function __createFolder {
+	if ! test -d "$1"; then
+		if test $OPTION_DRYRUN = false; then
+			mkdir -vp "$1"
+		fi
+	fi
+}
+
 function __moveFile {
+	if $OPTION_DRYRUN = true; then
+		__customOut cyan
+		echo "(Dry run mode) $1 --> $2"
+		__customOut reset
+	else
+		mv -vn "$1" "$2"
+	fi
+}
+
+function __processFile {
 	local FILENAME=`basename "$1"`
 	## test picture
 	if [ $OPTION_ALL = true ] || [[ "$FILENAME" = *.jpg ]]; then
@@ -93,8 +114,8 @@ function __moveFile {
 			local PARENT_FOLDER=`echo "$FILENAME" | sed "s/$SEPARATOR_MOTIF/\//g" | xargs -r -0 dirname`
 			local REAL_FILENAME=`echo "$FILENAME" | awk -F"$SEPARATOR_MOTIF" '{print $NF}'`
 			if test -n "$PARENT_FOLDER" -a -n "$REAL_FILENAME"; then
-				test -d "$OUTPUT_FOLDER/$PARENT_FOLDER" || mkdir -vp "$OUTPUT_FOLDER/$PARENT_FOLDER"
-				mv -nv "$1" "$OUTPUT_FOLDER/$PARENT_FOLDER/$REAL_FILENAME"
+				__createFolder "$OUTPUT_FOLDER/$PARENT_FOLDER"
+				__moveFile "$1" "$OUTPUT_FOLDER/$PARENT_FOLDER/$REAL_FILENAME"
 			else
 				__customOut red
 				echo "Problem with filename $1"
@@ -102,11 +123,11 @@ function __moveFile {
 			fi
 		else
 			__customOut yellow
-			echo "Cannot find motif in $1"
+			echo "Cannot find motif '$SEPARATOR_MOTIF' in $1"
 			__customOut reset
 		fi
 	else
-		__customOut cyan
+		__customOut blue
 		echo "Bypass $1"
 		__customOut reset
 	fi
@@ -115,11 +136,14 @@ function __moveFile {
 OUTPUT_FOLDER="."
 SEPARATOR_MOTIF="<o_O>"
 OPTION_ALL=false
+OPTION_DRYRUN=false
 
 while test -n "$1"; do
 	case $1 in
 		-a|--all)
 			OPTION_ALL=true ;;
+		-n|--dry-run)
+			OPTION_DRYRUN=true ;;
 		-o)
 			shift; OUTPUT_FOLDER="$1" ;;
 		--output=?*)
@@ -137,10 +161,10 @@ done
 
 for INPUT in "$@"; do
 	if test -f "$INPUT"; then
-		__moveFile "$INPUT"
+		__processFile "$INPUT"
 	elif test -d "$INPUT"; then
 		find "$INPUT" -type f | while read LINE; do
-			__moveFile "$LINE"
+			__processFile "$LINE"
 		done
 	fi
 done
