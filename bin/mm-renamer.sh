@@ -24,7 +24,7 @@ echo "NAME
 
 USAGE
 	mm-renamer --date --dry-run --hash-len=12 --lower-ext *.JPG
-	mm-renamer -d -n -h 12 -l *.JPG
+	mm-renamer -d -n -s 12 -l *.JPG
 	mm-renamer --date --jpg *.JPG
 	mm-renamer --keep-name --date --lower-ext *.JPG
 
@@ -37,21 +37,21 @@ OPTIONS
 
 	-d, --date
 		Prefix the filename with the date if present in the exif metadata
-		Works with jpg/png/mp4/mov/... files 
+		Works with jpg/png/mp4/mov/... files
 		Uses exiftool to read exif metadata
-	
-	-h N, --hash-len=N
+
+	-s, --hash-len=N
 		Uses N chars of the hash
-	
+
 	-k, --keep-name
 		Use file name instead of the hash
 
 	-l, --lower-ext
 		Lower case the extension
-	
+
 	--jpg, --png, --nef, --avi, --mkv, --mp4, --mov, --xml
 		Use the given extension
-	
+
 EXAMPLES
 	mm-renamer.sh --date test.JPEG
 	( )  test.JPEG -> ./20140224-133158_53c8d09.JPEG
@@ -61,7 +61,7 @@ EXAMPLES
 
 	mm-renamer.sh --date --hash-len=12 --jpg test.JPEG
 	( )  test.JPEG -> ./20140224-133158_53c8d09c2e45.jpg
-	
+
 "
 }
 
@@ -112,14 +112,14 @@ __getHash () {
 }
 
 __getTimeStamp () {
-	OUT=$($EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
+	OUT=$($EXIFTOOL_BIN -modifyDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
 	test -z "$OUT" && \
-		OUT=$($EXIFTOOL_BIN -modifyDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
+		OUT=$($EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
 	echo "$OUT"
 }
 
 
-__init 
+__init
 
 OPTION_KEEPNAME=false
 OPTION_LCEXT=false
@@ -129,11 +129,13 @@ OPTION_EXT=
 OPTION_HLEN=7
 
 while test -n "$1"; do
-	case $1 in 
+	case $1 in
 		--dry-run|-n)
 			OPTION_DRYRUN=true ;;
 		--date|-d)
 			OPTION_DATE=true ;;
+		-s)
+			shift; OPTION_HLEN=$1 ;;
 		--hash-len=?*)
 			OPTION_HLEN=${1#--hash-len=} ;;
 		--keep-name|-k)
@@ -152,7 +154,7 @@ while test -n "$1"; do
 done
 
 __customOut reset
-for FILE in "$@"; do 
+for FILE in "$@"; do
 	if test ! -e "$FILE"; then
 		__customOut blue
 		echo "(/)  Problem with: $FILE"
@@ -160,7 +162,7 @@ for FILE in "$@"; do
 	fi
 	DIRNAME=$(dirname "$FILE")
 	BASENAME=$(basename "$FILE")
-	OLDNAME="$DIRNAME/$BASENAME"	
+	OLDNAME="$DIRNAME/$BASENAME"
 	EXTENSION="${BASENAME##*.}"
 	FILENAME="${BASENAME/%.$EXTENSION/}"
 	if test -z "$FILENAME"; then
@@ -175,7 +177,7 @@ for FILE in "$@"; do
 	else
 		HASH=$(__getHash "$FILE")
 		if test -z "$HASH"; then
-			__customOut blue 
+			__customOut blue
 			echo "(/)  Cannot compute hash for: $OLDNAME"
 			continue
 		fi
@@ -202,4 +204,3 @@ for FILE in "$@"; do
 		mv -n -v "$FILE" "$NEWNAME"
 	fi
 done
-
