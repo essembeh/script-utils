@@ -51,6 +51,9 @@ OPTIONS
 
 	--jpg, --png, --nef, --avi, --mkv, --mp4, --mov, --xml
 		Use the given extension
+	
+	--crc, --md5
+		Use another hash function
 
 EXAMPLES
 	mm-renamer.sh --date test.JPEG
@@ -146,6 +149,10 @@ while test -n "$1"; do
 			OPTION_LCEXT=true ;;
 		--jpg|--png|--nef|--avi|--mkv|--mp4|--mov|--xml)
 			OPTION_EXT="${1#--}" ;;
+		--crc)
+			HASH_BIN="crc32" ;;
+		--md5)
+			HASH_BIN="md5sum" ;;
 		--help|-h)
 			__usage; exit 0;;
 		*)	break;;
