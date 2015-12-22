@@ -51,7 +51,7 @@ OPTIONS
 
 	--jpg, --png, --nef, --avi, --mkv, --mp4, --mov, --xml
 		Use the given extension
-	
+
 	--crc, --md5
 		Use another hash function
 
@@ -115,9 +115,12 @@ __getHash () {
 }
 
 __getTimeStamp () {
-	OUT=$($EXIFTOOL_BIN -modifyDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
-	test -z "$OUT" && \
+	## Best for photos
+	OUT=$($EXIFTOOL_BIN -exif:DateTimeOriginal -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
+	if test -z "$OUT"; then
+		## Usually for clips
 		OUT=$($EXIFTOOL_BIN -createDate -s3 -d "$DATE_FORMAT" "$1" 2>/dev/null)
+	fi
 	echo "$OUT"
 }
 
@@ -143,8 +146,6 @@ while test -n "$1"; do
 			OPTION_HLEN=${1#--hash-len=} ;;
 		--keep-name|-k)
 			OPTION_KEEPNAME=true ;;
-		-h)
-			shift; OPTION_HLEN=$1 ;;
 		--lower-ext|-l)
 			OPTION_LCEXT=true ;;
 		--jpg|--png|--nef|--avi|--mkv|--mp4|--mov|--xml)
