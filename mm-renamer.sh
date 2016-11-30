@@ -48,6 +48,9 @@ OPTIONS
 
 	-l, --lower-ext
 		Lower case the extension
+	
+	--noext
+		Remove extension
 
 	--jpg, --png, --nef, --avi, --mkv, --mp4, --mov, --xml
 		Use the given extension
@@ -129,6 +132,7 @@ __init
 
 OPTION_KEEPNAME=false
 OPTION_LCEXT=false
+OPTION_NOEXT=false
 OPTION_DATE=false
 OPTION_DRYRUN=false
 OPTION_EXT=
@@ -148,6 +152,8 @@ while test -n "$1"; do
 			OPTION_KEEPNAME=true ;;
 		--lower-ext|-l)
 			OPTION_LCEXT=true ;;
+		--noext)
+			OPTION_NOEXT=true ;;
 		--jpg|--png|--nef|--avi|--mkv|--mp4|--mov|--xml)
 			OPTION_EXT="${1#--}" ;;
 		--crc)
@@ -191,7 +197,9 @@ for FILE in "$@"; do
 		fi
 		NEWNAME="$NEWNAME$HASH"
 	fi
-	if test -n "$OPTION_EXT"; then
+	if test "$OPTION_NOEXT" = "true"; then
+		NEWNAME="$NEWNAME"
+	elif test -n "$OPTION_EXT"; then
 		NEWNAME="$NEWNAME.$OPTION_EXT"
 	elif test -n "$EXTENSION"; then
 		test "$OPTION_LCEXT" = "true" && EXTENSION=$(echo -n "$EXTENSION" | awk '{print tolower($1)}')
