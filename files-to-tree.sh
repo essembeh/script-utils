@@ -18,8 +18,6 @@ DESCRIPTION:
 USAGE:
 	$APP_NAME *
 	$APP_NAME /path/to/filaA.jpg /path/to/filaB.jpg
-	$APP_NAME /path/to/input/folder/
-	$APP_NAME -a /path/to/input/folder/
 	$APP_NAME -o /path/to/root/folder *
 	$APP_NAME -m __@@__ *
 
@@ -27,12 +25,11 @@ OPTIONS:
 	-h, --help
 		Display this message.
 
-  -n, --dry-run
+	-n, --dry-run
 		Only display new names, does not create any folder nor move any file.
 
-	-a, --all
-		Rename all files taht contains the motif.
-		By default only files with jpg extension are processed.
+	-l, --links
+		Do not move file, use hard links instead
 
 	-o <FOLDER>, --output=<FOLDER>
 		Use given folder as root folder, default is current folder.
@@ -44,12 +41,6 @@ OPTIONS:
 EXAMPLES:
 	$APP_NAME folder${SEPARATOR_MOTIF}name.jpg
 		Will rename the given file to ./folder/name.jpg
-
-	$APP_NAME folder${SEPARATOR_MOTIF}name.txt
-		Won't do anything since not a jpg file
-
-	$APP_NAME -a folder${SEPARATOR_MOTIF}name.txt
-		Will rename the file
 "
 }
 
@@ -86,64 +77,17 @@ __customOut() {
     done
 }
 
-function __createFolder {
-	if ! test -d "$1"; then
-		if test $OPTION_DRYRUN = false; then
-			mkdir -vp "$1"
-		fi
-	fi
-}
-
-function __moveFile {
-	if $OPTION_DRYRUN = true; then
-		__customOut cyan
-		echo "(Dry run mode) $1 --> $2"
-		__customOut reset
-	else
-		mv -vn "$1" "$2"
-	fi
-}
-
-function __processFile {
-	local FILENAME=`basename "$1"`
-	## test picture
-	if [ $OPTION_ALL = true ] || [[ "$FILENAME" = *.jpg ]]; then
-		## Count motif
-		local MOTIF_COUNT=`echo "$FILENAME" | grep -o "$SEPARATOR_MOTIF" | wc -l`
-		if test $MOTIF_COUNT -ge 1; then
-			local PARENT_FOLDER=`echo "$FILENAME" | sed "s/$SEPARATOR_MOTIF/\//g" | xargs -r -0 dirname`
-			local REAL_FILENAME=`echo "$FILENAME" | awk -F"$SEPARATOR_MOTIF" '{print $NF}'`
-			if test -n "$PARENT_FOLDER" -a -n "$REAL_FILENAME"; then
-				__createFolder "$OUTPUT_FOLDER/$PARENT_FOLDER"
-				__moveFile "$1" "$OUTPUT_FOLDER/$PARENT_FOLDER/$REAL_FILENAME"
-			else
-				__customOut red
-				echo "Problem with filename $1"
-				__customOut reset
-			fi
-		else
-			__customOut yellow
-			echo "Cannot find motif '$SEPARATOR_MOTIF' in $1"
-			__customOut reset
-		fi
-	else
-		__customOut blue
-		echo "Bypass $1"
-		__customOut reset
-	fi
-}
-
-OUTPUT_FOLDER="."
-SEPARATOR_MOTIF="<o_O>"
-OPTION_ALL=false
+OUTPUT_FOLDER=""
+SEPARATOR_MOTIF="_____"
 OPTION_DRYRUN=false
+OPTION_LINK=false
 
 while test -n "$1"; do
 	case $1 in
-		-a|--all)
-			OPTION_ALL=true ;;
 		-n|--dry-run)
 			OPTION_DRYRUN=true ;;
+		-l|--links)
+			OPTION_LINK=true ;;
 		-o)
 			shift; OUTPUT_FOLDER="$1" ;;
 		--output=?*)
@@ -159,12 +103,30 @@ while test -n "$1"; do
 	shift
 done
 
-for INPUT in "$@"; do
-	if test -f "$INPUT"; then
-		__processFile "$INPUT"
-	elif test -d "$INPUT"; then
-		find "$INPUT" -type f | while read LINE; do
-			__processFile "$LINE"
-		done
+for SOURCE in "$@"; do
+	if ! test -e "$SOURCE"; then
+		echo "$SOURCE does not exist"
+	else
+		DESTINATION=`echo "$SOURCE" | sed "s/$SEPARATOR_MOTIF/\//g"`
+		if test -n "$OUTPUT_FOLDER"; then
+			mkdir -p "$OUTPUT_FOLDER"
+			DESTINATION="$OUTPUT_FOLDER/$DESTINATION"
+		fi
+		if test -z "$DESTINATION"; then
+			echo "$SOURCE: error"
+		elif test "$SOURCE" = "$DESTINATION"; then
+			echo "$SOURCE does not contain motif: $SEPARATOR_MOTIF"
+		elif test -e "$DESTINATION"; then
+			echo "$DESTINATION already exists"
+		elif test $OPTION_DRYRUN = true; then
+			echo "(Dry run mode) $SOURCE --> $DESTINATION"
+		else
+			mkdir -p "`dirname "$DESTINATION"`"
+			if $OPTION_LINK = true; then
+				ln -v "$SOURCE" "$DESTINATION"
+			else
+				mv -vn "$SOURCE" "$DESTINATION"
+			fi
+		fi
 	fi
 done
