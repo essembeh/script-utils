@@ -44,20 +44,21 @@ while test -n "$1"; do
 	shift
 done
 test "$OPTION_SET" = "false" || exec > "$DEFAULT_FILE"
-printf "<background>\n  <starttime><hour>0</hour><minute>00</minute><second>00</second></starttime>\n"
-for IMAGE in $@; do
+echo "<background>"
+echo "  <starttime><hour>0</hour><minute>00</minute><second>00</second></starttime>"
+for IMAGE in "$@"; do
 	CURRENT_IMAGE=$(realpath "$IMAGE")
 	test -f "$CURRENT_IMAGE"
 	test -n "$FIST_IMAGE" || FIST_IMAGE="$CURRENT_IMAGE"
 	if [ -n "$PREVIOUS_IMAGE" ]; then
-		printf "  <transition><duration>$TRANSITION</duration><from>$PREVIOUS_IMAGE</from><to>$CURRENT_IMAGE</to></transition>\n"
+		echo "  <transition><duration>$TRANSITION</duration><from>$PREVIOUS_IMAGE</from><to>$CURRENT_IMAGE</to></transition>"
 	fi
-	printf "  <static><duration>$DURATION</duration><file>$CURRENT_IMAGE</file></static>\n"
+	echo "  <static><duration>$DURATION</duration><file>$CURRENT_IMAGE</file></static>"
 	PREVIOUS_IMAGE="$CURRENT_IMAGE"
 done
 if [ -n "$FIST_IMAGE" -a -n "$PREVIOUS_IMAGE" ]; then
-	printf "  <transition><duration>1</duration><from>$PREVIOUS_IMAGE</from><to>$FIST_IMAGE</to></transition>\n"
+	echo "  <transition><duration>$TRANSITION</duration><from>$PREVIOUS_IMAGE</from><to>$FIST_IMAGE</to></transition>"
 fi
-printf "</background>\n"
+echo "</background>"
 
 test "$OPTION_SET" = "false" || gsettings set org.gnome.desktop.background picture-uri "file://$DEFAULT_FILE"
