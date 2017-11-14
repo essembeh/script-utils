@@ -3,6 +3,7 @@
 MGIT_PAGER="less -r"
 MGIT_CONF="./mgit.conf"
 MGIT_LIST="conf"
+MGIT_QUIET="false"
 
 GIT="/usr/bin/git"
 
@@ -69,6 +70,7 @@ function main {
 		echo "Cannot find any git repository in this folder"
 	else
 		for PROJECT_FOLDER in $LIST; do 
+			customOut reset
 			if test -d "$PROJECT_FOLDER"; then
 				(cd "$PROJECT_FOLDER"
 					PROJECT_NAME="$(basename "$PROJECT_FOLDER")"
@@ -79,20 +81,22 @@ function main {
 					else 
 						BRANCH_COLOR=red
 					fi
-					customOut reset bold
-					fillLine "="
+					test "$MGIT_QUIET" == "false" && fillLine "="
+					test "$MGIT_QUIET" == "false" && customOut bold
 					customOut yellow
-					printf ">>>  "
+					echo -n ">>>  "
 					customOut cyan
-					printf "%s   " "$PROJECT_NAME"
+					echo -n "$PROJECT_NAME"
 					customOut $BRANCH_COLOR
-					printf "(%s)\n" "$BRANCH"
+					echo -n " ($BRANCH) "
 					customOut reset 
+					test "$MGIT_QUIET" == "false" && echo ""
 					if test $# -gt 0; then 
-						echo ""
 						$GIT "$@"
+					elif test "$MGIT_QUIET" == "true"; then
+						echo ""
 					fi
-					fillLine "_"
+					test "$MGIT_QUIET" == "false" && fillLine "_"
 				)
 			fi
 		done
@@ -100,11 +104,12 @@ function main {
 }
 
 customOut reset halfbright purple 
-while getopts "fcl" "optchar"; do
+while getopts "fclq" "optchar"; do
 	case "$optchar" in
 		l) echo "--> mode pager"; export MGIT_MODE="pager";;
 		f) echo "--> using find"; export MGIT_LIST="find";;
 		c) echo "--> using conf"; export MGIT_LIST="conf";;
+		q) echo "--> quiet mode"; export MGIT_QUIET="true";;
 		*) exit 1;
 	esac
 done
