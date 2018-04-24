@@ -28,6 +28,7 @@ CHANNELS = ["france2",
             "france5",
             "franceo"]
 Q_DICT = {"best":    (1024, 576),
+          "medium":  (704, 396),
           "average": (512, 288),
           "low":     (320, 180),
           "lowest":  (256, 144)}
