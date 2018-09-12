@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-BORG_ENV_FILE=".borg.env"
-BORG_ARGS_FILE=".borg.args"
+BORG_ENV_FILE="BORG_ENV"
+BORG_ARGS_FILE="BORG_ARGS"
 BORG_DEFAULT_ARGS="--stats --progress"
 
 for FOLDER in "$@"; do
@@ -37,14 +37,11 @@ for FOLDER in "$@"; do
 		echo "Listing existing snapshots for $NAME in $BORG_REPO"
 		borg list -P "$NAME@"
 		
-		cd ..
-		test -d "$NAME"
-		pwd
 		echo ""
-		echo -n "Backup $PWD/$NAME to $BORG_REPO ::${NAME}@{now} ? (Y/n)"
+		echo -n "Backup $PWD to $BORG_REPO ::${NAME}@{now} ? (Y/n)"
 		read YN
 		if test -z "$YN" -o "$YN" = "y"; then
-			borg create $BORG_ARGS "::${NAME}@{now}" "$NAME"
+			borg create $BORG_ARGS "::${NAME}@{now}" "."
 		fi
 	)
 	echo ""
