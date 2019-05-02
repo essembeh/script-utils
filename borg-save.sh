@@ -2,7 +2,6 @@
 set -e
 
 BORG_ENV_FILE="BORG_ENV"
-BORG_ARGS_FILE="BORG_ARGS"
 BORG_DEFAULT_ARGS="--stats --progress"
 
 for FOLDER in "$@"; do
@@ -25,16 +24,16 @@ for FOLDER in "$@"; do
 			exit 1
 		fi
 
-		BORG_ARGS="$BORG_DEFAULT_ARGS"
-		if test -r "$BORG_ARGS_FILE"; then
-			BORG_ARGS=$(cat "$BORG_ARGS_FILE")
-			echo "Found $PWD/$BORG_ARGS_FILE, using args: $BORG_ARGS"
+		if test -z "$BORG_ARGS"; then
+			echo "BORG_ARGS not set, using defaults: $BORG_DEFAULT_ARGS"
+			BORG_ARGS="$BORG_DEFAULT_ARGS"
 		else
-			echo "Cannot find $PWD/$BORG_ARGS_FILE, using defaults args: $BORG_ARGS"
+			echo "Using custom BORG_ARGS: $BORG_ARGS"
+			
 		fi
 
 		echo ""
-		echo "Listing existing snapshots for $NAME in $BORG_REPO"
+		echo "\nListing existing snapshots for $NAME in $BORG_REPO"
 		borg list -P "$NAME@"
 		
 		echo ""
