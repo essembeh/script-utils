@@ -11,12 +11,13 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="File dispatcher")
     parser.add_argument('-o', '--output', type=Path, metavar="FOLDER", help="output folder where files are dispatched")
     parser.add_argument('-n', '--dryrun', action='store_true', help="Dryrun mode, don't move/copy/link any file")
+    parser.add_argument('-d', '--delete', action='store_true', help="Deletes files already present in target direcory")
     parser.add_argument('-p', '--prefix', action='store', default=2, type=int, metavar="LENGTH", help="prefix length (default = 2)")
     parser.add_argument('-r', '--remove-prefix', action='store_true', help="remove the prefix from filename when moved/copied/linked")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-l', '--symlinks', action='store_true', help="Do symbolic links instead of moving files")
-    group.add_argument('-c', '--copy', action='store_true', help="Copy files instead of moving them")
-    parser.add_argument("files",  nargs=argparse.ONE_OR_MORE, type=Path, help="files to move/copy/link")
+    group.add_argument('-l', '--link', action='store_const', const="link", dest="operation", default="move", help="Do symbolic links instead of moving files")
+    group.add_argument('-c', '--copy', action='store_const', const="copy", dest="operation", help="Copy files instead of moving them")
+    parser.add_argument("files", nargs=argparse.ONE_OR_MORE, type=Path, help="files to move/copy/link")
     args = parser.parse_args()
 
     target = args.output or Path.cwd()
@@ -34,7 +35,10 @@ if __name__ == "__main__":
                         folders_to_create.append(prefix_folder)
                     files_to_move[source_file] = target_file
                 else:
-                    print("[INFO]  File already exists: {target}".format(target=target_file))
+                    if args.delete:
+                        files_to_move[source_file] = None
+                    else:
+                        print("[INFO]  File already exists: {source}".format(source=source_file))
             else:
                 print("[ERROR]  Cannot extract prefix ({len}) for file: {file}".format(file=source_file, len=args.prefix), file=sys.stderr)
         else:
@@ -47,15 +51,22 @@ if __name__ == "__main__":
         if not args.dryrun:
             folder.mkdir(parents=True)
     for source, dest in files_to_move.items():
-        if args.copy:
-            print(" {prompt} cp  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+        if dest is None:
+            print(" {prompt} rm  '{source}'".format(prompt=prompt, source=source))
             if not args.dryrun:
-                shutil.copy(str(source), str(dest))
-        elif args.symlinks:
-            print(" {prompt} ln -s  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
-            if not args.dryrun:
-                dest.symlink_to(source)
+                source.unlink()
         else:
-            print(" {prompt} mv  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
-            if not args.dryrun:
-                source.rename(dest)
+            if args.operation == "copy":
+                print(" {prompt} cp  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+                if not args.dryrun:
+                    shutil.copy(str(source), str(dest))
+            elif args.operation == "link":
+                print(" {prompt} ln -s  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+                if not args.dryrun:
+                    dest.symlink_to(source)
+            elif args.operation == "move":
+                print(" {prompt} mv  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+                if not args.dryrun:
+                    source.rename(dest)
+            else:
+                raise ValueError("Unknown operation {0}".format(args.operation))
