@@ -6,6 +6,7 @@ import sys
 from argparse import ArgumentParser
 from collections import OrderedDict
 from pathlib import Path
+from termicolor import print_green, print_red, print_style, Color
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="File dispatcher")
@@ -38,34 +39,33 @@ if __name__ == "__main__":
                     if args.delete:
                         files_to_move[source_file] = None
                     else:
-                        print("[INFO]  File already exists: {source}".format(source=source_file))
+                        print_green("[INFO]  File already exists: {source}".format(source=source_file))
             else:
-                print("[ERROR]  Cannot extract prefix ({len}) for file: {file}".format(file=source_file, len=args.prefix), file=sys.stderr)
+                print_red("[ERROR]  Cannot extract prefix ({len}) for file: {file}".format(file=source_file, len=args.prefix), file=sys.stderr)
         else:
-            print("[ERROR]  Cannot find file: {file}".format(file=source_file), file=sys.stderr)
+            print_red("[ERROR]  Cannot find file: {file}".format(file=source_file), file=sys.stderr)
 
     prompt = "(dryrun) $" if args.dryrun else "$"
     for folder in sorted(folders_to_create):
-        print(" {prompt} mkdir  '{folder}'".format(
-            prompt=prompt, folder=folder))
+        print_style(" {prompt} mkdir  '{folder}'".format(prompt=prompt, folder=folder), fg_color=Color.YELLOW)
         if not args.dryrun:
             folder.mkdir(parents=True)
     for source, dest in files_to_move.items():
         if dest is None:
-            print(" {prompt} rm  '{source}'".format(prompt=prompt, source=source))
+            print_style(" {prompt} rm  '{source}'".format(prompt=prompt, source=source), fg_color=Color.YELLOW)
             if not args.dryrun:
                 source.unlink()
         else:
             if args.operation == "copy":
-                print(" {prompt} cp  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+                print_style(" {prompt} cp  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest), fg_color=Color.YELLOW)
                 if not args.dryrun:
                     shutil.copy(str(source), str(dest))
             elif args.operation == "link":
-                print(" {prompt} ln -s  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+                print_style(" {prompt} ln -s  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest), fg_color=Color.YELLOW)
                 if not args.dryrun:
                     dest.symlink_to(source)
             elif args.operation == "move":
-                print(" {prompt} mv  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest))
+                print_style(" {prompt} mv  '{source}'  '{dest}'".format(prompt=prompt, source=source, dest=dest), fg_color=Color.YELLOW)
                 if not args.dryrun:
                     source.rename(dest)
             else:
