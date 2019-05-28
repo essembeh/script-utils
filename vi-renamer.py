@@ -30,7 +30,7 @@ if __name__ == "__main__":
         with open(tmp.name, "w") as fp:
             for f in input_files:
                 fp.write(str(f) + "\n")
-        subprocess.run([args.editor or os.getenv("EDITOR", 'vi'), tmp.name])
+        subprocess.check_call([args.editor or os.getenv("EDITOR", 'vi'), tmp.name])
         with open(tmp.name, "r") as fp:
             output_lines = list(map(str.strip, fp))
     # Check that the line count is the same
