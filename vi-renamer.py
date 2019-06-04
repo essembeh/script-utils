@@ -3,12 +3,11 @@
 import argparse
 import os
 import subprocess
-import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from termicolor import Color, print_green, print_red, print_style
+from termicolor import print_red
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="File renamer")
@@ -21,7 +20,7 @@ if __name__ == "__main__":
 
     input_files = []
     output_lines = []
-    # Filter existing files from input and avoid doublons 
+    # Filter existing files from input and avoid doublons
     for f in args.files:
         if f.exists() and f not in input_files:
             input_files.append(f)

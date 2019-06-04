@@ -4,22 +4,25 @@ import argparse
 import hashlib
 import os
 import subprocess
-import sys
 from argparse import ArgumentParser
+from collections import OrderedDict
 from pathlib import Path
 from string import Formatter
 
-from termicolor import print_red, print_green, print_style, Color
+from termicolor import Color, Style, print_red, print_style
 
-BUILTIN_FORMATS = (
-    "{year}{month:0>2}{day:0>2}-{hour:0>2}{min:0>2}{sec:0>2}_{md5:.7}.{ext}", 
-    "{md5:.7}.{ext}"
-)
-SAMPLE_FORMATS = (
-    "{year}-{month:0>2}-{day:0>2} {hour:0>2}:{min:0>2}:{sec:0>2} {name}.{ext}", 
-    "{sha1}.{ext}",
-    "{name} ({sha512:.3}).{ext}"
-)
+BUILTIN_FORMATS = OrderedDict((
+    ("default", "{md5:.7}{ext:lower}"),
+    ("date", "{year}{month:0>2}{day:0>2}-{hour:0>2}{min:0>2}{sec:0>2}_{md5:.7}{ext:lower}"),
+    ("folderbydate", "{year}-{month:0>2}-{day:0>2}/{hour:0>2}h{min:0>2}m{sec:0>2}s {md5:.7}{ext:lower}"),
+    ("lower", "{filename:lower}"),
+    ("upper", "{filename:upper}"),
+    ("noext", "{name}"),
+    ("md5", "{md5}{ext}"),
+    ("sha1", "{sha1}{ext}")
+))
+
+EXIFTOOL_BIN = "exiftool"
 EXIFTOOL_ARGS = ("-exif:DateTimeOriginal", "-createDate")
 EXIFTOOL_FMT = '_%Y_%m_%d_%H_%M_%S_'
 EXIFTOOL_FIELDS = {
@@ -49,13 +52,20 @@ def get_hash(file: Path, func: callable):
 
 
 def get_timestamp(file: Path):
-    for arg in EXIFTOOL_ARGS:
-        p = subprocess.run([os.getenv("EXIFTOOL_BIN", "exiftool"), arg, "-s3", "-d", EXIFTOOL_FMT, str(
-            file)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        if p.returncode == 0:
-            fields = p.stdout.decode().strip().split("_")
-            if len(fields) > max(EXIFTOOL_FIELDS.values()):
-                return dict([(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()])
+    global EXIFTOOL_BIN
+    if EXIFTOOL_BIN is not None:
+        if "EXIFTOOL_BIN" in os.environ:
+            EXIFTOOL_BIN = os.getenv("EXIFTOOL_BIN")
+        for arg in EXIFTOOL_ARGS:
+            try:
+                p = subprocess.run([EXIFTOOL_BIN, arg, "-s3", "-d", EXIFTOOL_FMT, str(file)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                if p.returncode == 0:
+                    fields = p.stdout.decode().strip().split("_")
+                    if len(fields) > max(EXIFTOOL_FIELDS.values()):
+                        return dict([(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()])
+            except FileNotFoundError:
+                print_red("Cannot fin 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN")
+                EXIFTOOL_BIN = None
     return {}
 
 
@@ -71,13 +81,22 @@ class MMFormatter(Formatter):
             self.__timestamp = get_timestamp(self.__file)
         return self.__timestamp
 
+    def format_field(self, value, format_spec):
+        if format_spec == "lower":
+            return str(value).lower()
+        if format_spec == "upper":
+            return str(value).upper()
+        return super().format_field(value, format_spec)
+
     def get_value(self, key, args, kwargs):
         if key == "filename":
             return self.__file.name
         elif key == "name":
             return self.__file.stem
         elif key == "ext":
-            return ".".join(map(lambda e: e[1:], self.__file.suffixes))
+            return self.__file.suffix
+        elif key == "suffixes":
+            return "".join(self.__file.suffixes)
         elif key in HASH_FUNC:
             return get_hash(self.__file, HASH_FUNC[key])
         elif key in self.timestamp:
@@ -87,38 +106,37 @@ class MMFormatter(Formatter):
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="File renamer")
-    parser.add_argument('-F', '--list-formats', action='store_true', help="List format samples")
-    parser.add_argument('-f', '--format', action='append', dest="formats", type=str, metavar="FORMAT", help="the formats to rename given files (see python str.format)")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-l', '--list-formats', dest="format_list", action='store_true', help="List format samples")
+    group.add_argument('-f', '--format', dest="format_id", metavar="ID", default="default", choices=BUILTIN_FORMATS.keys(), help="use builtin format (see -l)")
+    group.add_argument('-F', '--custom-format', dest="format_custom", metavar="FORMAT", help="use custom format (see python str.format and -l)")
     parser.add_argument('-n', '--dryrun', action='store_true', help="Dryrun mode, don't rename any file")
+    parser.add_argument('-o', '--output-folder', dest="output_folder", type=Path, help="rename files and move them to a specific folder")
     parser.add_argument("files", nargs=argparse.ZERO_OR_MORE, type=Path, help="files to rename")
     args = parser.parse_args()
 
-    if args.list_formats:
-        print("Builtin formats:")
-        for f in BUILTIN_FORMATS:
-            print(" -f '" + f + "'")
-        print("Sample formats:")
-        for f in SAMPLE_FORMATS:
-            print(" -f '" + f + "'")
+    if args.format_list:
+        print_style("Builtin formats:", styles=[Style.UNDERLINE])
+        for k, v in BUILTIN_FORMATS.items():
+            print_style("  {0:<12}".format(k), end="", styles=[Style.BOLD])
+            print_style(": '{0}'".format(v), styles=[Style.HALF_BRIGHT])
     else:
         for source in args.files:
             if not source.is_file():
                 print_red("Invalid file: {source}".format(source=source))
                 continue
-            formatter = MMFormatter(source)
-            for f in args.formats or BUILTIN_FORMATS:
-                try:
-                    newname = formatter.format(f)
-                    if newname == source.name:
-                        print_style("File already named: {newname}".format(newname=newname), fg_color=Color.YELLOW)
-                    else:
-                        target = source.parent / newname
-                        if target.exists():
-                            print_red("Target already exists: {target}".format(target=target))
-                        else:
-                            print_green("Rename file: {source} --> {target}".format(source=source, target=target))
-                            if not args.dryrun:
-                                source.rename(target)
-                    break
-                except ValueError:
-                    pass
+            try:
+                newname = MMFormatter(source).format(args.format_custom or BUILTIN_FORMATS[args.format_id])
+                target = (args.output_folder or source.parent) / newname
+                if source == target:
+                    print_style("'{source}' already named".format(source=source), fg_color=Color.YELLOW)
+                elif target.exists():
+                    print_style("'{target}' already exists".format(target=target), fg_color=Color.RED)
+                else:
+                    print_style("'{source}' -> '{target}'".format(source=source, target=target), fg_color=Color.PURPLE if args.dryrun else Color.GREEN)
+                    if not args.dryrun:
+                        if not target.parent.is_dir():
+                            target.parent.mkdir(parents=True)
+                        source.rename(target)
+            except BaseException as e:
+                print_red("'{source}' cannot be renamed ({ex})".format(source=source, ex=e))

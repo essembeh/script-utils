@@ -21,7 +21,7 @@ from enum import Enum, IntEnum
 class Style(Enum):
     '''
     Represent a terminal style.
-    Note that BG_COLOR and FG_COLOR should not be used directly.
+    Note that _BG_COLOR and _FG_COLOR should not be used directly.
     '''
     BOLD = "bold"
     HALF_BRIGHT = "dim"
@@ -31,8 +31,8 @@ class Style(Enum):
     STANDOUT = "smso"
     NO_STANDOUT = "rmso"
     RESET = "sgr0"
-    BG_COLOR = 'setab'
-    FG_COLOR = 'setaf'
+    _BG_COLOR = 'setab'
+    _FG_COLOR = 'setaf'
 
 
 class Color(Enum):
@@ -70,9 +70,9 @@ class TermiColor():
             sys.stdout.flush()
             self.__tput(Style.RESET)
             if self.__bg:
-                self.__tput(Style.BG_COLOR, color=self.__bg)
+                self.__tput(Style._BG_COLOR, color=self.__bg)
             if self.__fg:
-                self.__tput(Style.FG_COLOR, color=self.__fg)
+                self.__tput(Style._FG_COLOR, color=self.__fg)
             for s in self.__styles:
                 self.__tput(s)
 
