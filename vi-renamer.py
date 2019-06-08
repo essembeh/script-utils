@@ -6,8 +6,7 @@ import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-
-from termicolor import print_red
+from termicolor import Style, print_style, print_red
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="File renamer")
@@ -34,22 +33,25 @@ if __name__ == "__main__":
             output_lines = list(map(str.strip, fp))
     # Check that the line count is the same
     if len(input_files) != len(output_lines):
-        print_red("File count has changed")
+        print_red("File count has changed, cannot rename any file")
         exit(1)
     # Iterate the two lists
+    action_styles = [Style.FG_PURPLE if args.dryrun else Style.FG_GREEN]
     for source, dest in zip(input_files, output_lines):
         if len(dest) == 0:
             if args.delete:
                 # delete mode
-                print("Delete '{source}'".format(source=source))
+                print_style("Delete '{source}'".format(source=source), styles=action_styles)
                 if not args.dryrun:
                     source.unlink()
+            else:
+                print_red("'{source}' won't be deleted, use --delete to enable file deletion'".format(source=source))
         else:
             dest = Path(dest)
             if source != dest:
                 if dest.exists() and not args.force:
                     print_red("'{dest}' already exists, skip renaming '{source}'".format(source=source, dest=dest))
                 else:
-                    print("Rename '{source}' --> '{dest}'".format(source=source, dest=dest))
+                    print_style("Rename '{source}' --> '{dest}'".format(source=source, dest=dest), styles=action_styles)
                     if not args.dryrun:
                         source.rename(dest)

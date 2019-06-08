@@ -4,12 +4,13 @@ import argparse
 import hashlib
 import os
 import subprocess
+import sys
 from argparse import ArgumentParser
 from collections import OrderedDict
 from pathlib import Path
 from string import Formatter
 
-from termicolor import Color, Style, print_red, print_style
+from termicolor import Style, print_red, print_style, tc_print
 
 BUILTIN_FORMATS = OrderedDict((
     ("default", "{md5:.7}{ext:lower}"),
@@ -56,16 +57,18 @@ def get_timestamp(file: Path):
     if EXIFTOOL_BIN is not None:
         if "EXIFTOOL_BIN" in os.environ:
             EXIFTOOL_BIN = os.getenv("EXIFTOOL_BIN")
-        for arg in EXIFTOOL_ARGS:
-            try:
-                p = subprocess.run([EXIFTOOL_BIN, arg, "-s3", "-d", EXIFTOOL_FMT, str(file)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        try:
+            for arg in EXIFTOOL_ARGS:
+                cmd = [EXIFTOOL_BIN, arg, "-s3", "-d", EXIFTOOL_FMT, str(file)]
+                p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
                 if p.returncode == 0:
                     fields = p.stdout.decode().strip().split("_")
                     if len(fields) > max(EXIFTOOL_FIELDS.values()):
                         return dict([(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()])
-            except FileNotFoundError:
-                print_red("Cannot fin 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN")
-                EXIFTOOL_BIN = None
+        except FileNotFoundError:
+            print_style("Cannot find 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN",
+                        styles=[Style.FG_WHITE, Style.BG_RED, Style.BOLD])
+            EXIFTOOL_BIN = None
     return {}
 
 
@@ -116,10 +119,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.format_list:
-        print_style("Builtin formats:", styles=[Style.UNDERLINE])
         for k, v in BUILTIN_FORMATS.items():
-            print_style("  {0:<12}".format(k), end="", styles=[Style.BOLD])
-            print_style(": '{0}'".format(v), styles=[Style.HALF_BRIGHT])
+            tc_print("  {k:>15,bold}: '{v:half_bright}'", k=k, v=v)
     else:
         for source in args.files:
             if not source.is_file():
@@ -129,14 +130,17 @@ if __name__ == "__main__":
                 newname = MMFormatter(source).format(args.format_custom or BUILTIN_FORMATS[args.format_id])
                 target = (args.output_folder or source.parent) / newname
                 if source == target:
-                    print_style("'{source}' already named".format(source=source), fg_color=Color.YELLOW)
+                    print_style("'{source}' already named".format(source=source), styles=[Style.FG_YELLOW])
                 elif target.exists():
-                    print_style("'{target}' already exists".format(target=target), fg_color=Color.RED)
+                    print_red("'{source}' already exists".format(source=source))
                 else:
-                    print_style("'{source}' -> '{target}'".format(source=source, target=target), fg_color=Color.PURPLE if args.dryrun else Color.GREEN)
+                    print_style("'{source}' -> '{target}'".format(source=source, target=target), styles=[Style.FG_PURPLE if args.dryrun else Style.FG_GREEN])
                     if not args.dryrun:
                         if not target.parent.is_dir():
                             target.parent.mkdir(parents=True)
                         source.rename(target)
+            except KeyboardInterrupt:
+                print_red("Process interrupted")
+                sys.exit(1)
             except BaseException as e:
                 print_red("'{source}' cannot be renamed ({ex})".format(source=source, ex=e))
