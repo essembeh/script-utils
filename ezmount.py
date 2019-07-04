@@ -51,7 +51,10 @@ if __name__ == "__main__":
             tc_print("{cmd:bold}: {desc:half_bright}", cmd=cmd, desc=desc)
         action = None
         while action not in actions:
-            action = input("[{0}] ".format("/".join(actions))).strip().lower()
+            try:
+                action = input("[{0}] ".format("/".join(actions))).strip().lower()
+            except KeyboardInterrupt:
+                action = "x"
         print()
         # Mount/Umount
         if mounted and action in ("q", "u"):
@@ -72,4 +75,5 @@ if __name__ == "__main__":
                 mountpoint.rmdir()
             else:
                 tc_print("[{label:fg_green}] Keeping mountpoint {mnt:fg_blue}", label="info", mnt=mountpoint)
+                tc_print("[{label:fg_green}] To umount it run: {cmd:fg_yellow}", label="info", cmd="fusermount -u -z {0}; rmdir {0}".format(mountpoint))
             sys.exit(0)
