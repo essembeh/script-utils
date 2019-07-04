@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -12,36 +13,23 @@ from string import Formatter
 
 from termicolor import Style, print_red, print_style, tc_print
 
-BUILTIN_FORMATS = OrderedDict((
-    ("default", "{md5:.7}{ext:lower}"),
-    ("date", "{year}{month:0>2}{day:0>2}-{hour:0>2}{min:0>2}{sec:0>2}_{md5:.7}{ext:lower}"),
-    ("folderbydate", "{year}-{month:0>2}-{day:0>2}/{hour:0>2}h{min:0>2}m{sec:0>2}s {md5:.7}{ext:lower}"),
-    ("lower", "{filename:lower}"),
-    ("upper", "{filename:upper}"),
-    ("noext", "{name}"),
-    ("md5", "{md5}{ext}"),
-    ("sha1", "{sha1}{ext}")
-))
+CONFIG_FILE = Path(os.getenv("MM_RENAMER_CONF", os.path.expanduser("~/.mm-renamer.json")))
+BUILTIN_FORMATS = OrderedDict(
+    (
+        ("default", "{year}{month:0>2}{day:0>2}-{hour:0>2}{min:0>2}{sec:0>2}_{md5:.7}{ext:lower}"),
+        ("md5", "{md5:.7}{ext:lower}"),
+        ("sha1", "{sha1:.7}{ext:lower}"),
+        ("lower", "{filename:lower}"),
+        ("upper", "{filename:upper}"),
+        ("noext", "{name}"),
+    )
+)
 
 EXIFTOOL_BIN = "exiftool"
 EXIFTOOL_ARGS = ("-exif:DateTimeOriginal", "-createDate")
-EXIFTOOL_FMT = '_%Y_%m_%d_%H_%M_%S_'
-EXIFTOOL_FIELDS = {
-    "year": 1,
-    "month": 2,
-    "day": 3,
-    "hour": 4,
-    "min": 5,
-    "sec": 6
-}
-HASH_FUNC = {
-    "md5": hashlib.md5,
-    "sha1": hashlib.sha1,
-    "sha224": hashlib.sha224,
-    "sha256": hashlib.sha256,
-    "sha384": hashlib.sha384,
-    "sha512": hashlib.sha512
-}
+EXIFTOOL_FMT = "_%Y_%m_%d_%H_%M_%S_"
+EXIFTOOL_FIELDS = {"year": 1, "month": 2, "day": 3, "hour": 4, "min": 5, "sec": 6}
+HASH_FUNC = {"md5": hashlib.md5, "sha1": hashlib.sha1, "sha224": hashlib.sha224, "sha256": hashlib.sha256, "sha384": hashlib.sha384, "sha512": hashlib.sha512}
 
 
 def get_hash(file: Path, func: callable):
@@ -66,8 +54,10 @@ def get_timestamp(file: Path):
                     if len(fields) > max(EXIFTOOL_FIELDS.values()):
                         return dict([(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()])
         except FileNotFoundError:
-            print_style("Cannot find 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN",
-                        styles=[Style.FG_WHITE, Style.BG_RED, Style.BOLD])
+            print_style(
+                "Cannot find 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN",
+                styles=[Style.FG_WHITE, Style.BG_RED, Style.BOLD],
+            )
             EXIFTOOL_BIN = None
     return {}
 
@@ -110,13 +100,19 @@ class MMFormatter(Formatter):
 if __name__ == "__main__":
     parser = ArgumentParser(description="File renamer")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-l', '--list-formats', dest="format_list", action='store_true', help="List format samples")
-    group.add_argument('-f', '--format', dest="format_id", metavar="ID", default="default", choices=BUILTIN_FORMATS.keys(), help="use builtin format (see -l)")
-    group.add_argument('-F', '--custom-format', dest="format_custom", metavar="FORMAT", help="use custom format (see python str.format and -l)")
-    parser.add_argument('-n', '--dryrun', action='store_true', help="Dryrun mode, don't rename any file")
-    parser.add_argument('-o', '--output-folder', dest="output_folder", type=Path, help="rename files and move them to a specific folder")
+    group.add_argument("-l", "--list-formats", dest="format_list", action="store_true", help="List format samples")
+    group.add_argument("-f", "--format", dest="format_id", metavar="ID", default="default", choices=BUILTIN_FORMATS.keys(), help="use builtin format (see -l)")
+    group.add_argument("-F", "--custom-format", dest="format_custom", metavar="FORMAT", help="use custom format (see python str.format and -l)")
+    parser.add_argument("-n", "--dryrun", action="store_true", help="Dryrun mode, don't rename any file")
+    parser.add_argument("-o", "--output-folder", dest="output_folder", type=Path, help="rename files and move them to a specific folder")
     parser.add_argument("files", nargs=argparse.ZERO_OR_MORE, type=Path, help="files to rename")
     args = parser.parse_args()
+
+    if CONFIG_FILE.is_file():
+        tc_print("{0:fg_cyan,bold} {1:fg_cyan}", "Using custom configuration file:", CONFIG_FILE)
+        with CONFIG_FILE.open() as fp:
+            user_formats = json.load(fp)
+            BUILTIN_FORMATS.update(user_formats)
 
     if args.format_list:
         for k, v in BUILTIN_FORMATS.items():
