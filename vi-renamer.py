@@ -10,10 +10,10 @@ from termicolor import Style, print_style, print_red
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="File renamer")
-    parser.add_argument('-e', '--editor', action='store', help="Editor used to edit file list")
-    parser.add_argument('-f', '--force', action='store_true', help="Overwrite if target file already exists")
-    parser.add_argument('-d', '--delete', action='store_true', help="Delete file if line is empty")
-    parser.add_argument('-n', '--dryrun', action='store_true', help="Dryrun mode, don't rename any file")
+    parser.add_argument("-e", "--editor", action="store", help="Editor used to edit file list")
+    parser.add_argument("-f", "--force", action="store_true", help="Overwrite if target file already exists")
+    parser.add_argument("-d", "--delete", action="store_true", help="Delete file if line is empty")
+    parser.add_argument("-n", "--dryrun", action="store_true", help="Dryrun mode, don't rename any file")
     parser.add_argument("files", nargs=argparse.ONE_OR_MORE, type=Path, help="files to rename")
     args = parser.parse_args()
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         with open(tmp.name, "w") as fp:
             for f in input_files:
                 fp.write(str(f) + "\n")
-        subprocess.check_call([args.editor or os.getenv("EDITOR", 'vi'), tmp.name])
+        subprocess.check_call([args.editor or os.getenv("EDITOR", "vi"), tmp.name])
         with open(tmp.name, "r") as fp:
             output_lines = list(map(str.strip, fp))
     # Check that the line count is the same
