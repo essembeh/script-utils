@@ -13,10 +13,11 @@ from termicolor import tc_print
 COMMMANDS = (("x", "exit"), ("q", "umount and exit"), ("o", "xdg-open"), ("s", "shell"), ("m", "mount"), ("u", "umount"))
 
 
-def execute(*command, cwd=None):
+def execute(*command, cwd=None, check_rc=True):
     cmd = [str(c) for c in command]
     tc_print("[{label:fg_green}] {cmd:fg_yellow}", label="exec", cmd=" ".join(cmd))
-    subprocess.check_call(cmd, cwd=None if cwd is None else str(cwd))
+    fnc = subprocess.check_call if check_rc else subprocess.call
+    fnc(cmd, cwd=None if cwd is None else str(cwd))
 
 
 if __name__ == "__main__":
@@ -53,22 +54,27 @@ if __name__ == "__main__":
         while action not in actions:
             try:
                 action = input("[{0}] ".format("/".join(actions))).strip().lower()
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, EOFError):
                 action = "x"
         print()
-        # Mount/Umount
-        if mounted and action in ("q", "u"):
-            execute("fusermount", "-u", "-z", mountpoint)
-            mounted = False
-        elif not mounted and action in ("m", "o", "s"):
-            execute(binary, *args.extra_args, mountpoint)
-            mounted = True
 
+        # Mount/Umount
+        if action in ("q", "u"):
+            if mounted:
+                execute("fusermount", "-u", "-z", mountpoint)
+                mounted = False
+        elif action in ("m", "o", "s"):
+            if not mounted:
+                execute(binary, *args.extra_args, mountpoint)
+                mounted = True
+
+        # Action open/shell
         if action == "o":
             execute("xdg-open", mountpoint)
         elif action == "s":
-            execute(os.getenv("SHELL", "bash"), cwd=mountpoint)
+            execute(os.getenv("SHELL", "bash"), cwd=mountpoint, check_rc=False)
 
+        # Handle end of loop to quit
         if action in ("x", "q"):
             if not mounted:
                 tc_print("[{label:fg_green}] Remove mountpoint {mnt:fg_blue}", label="info", mnt=mountpoint)
