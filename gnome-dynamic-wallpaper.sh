@@ -4,6 +4,7 @@ set -e
 DEFAULT_FILE="$HOME/.wallpaper.xml"
 DURATION=60
 TRANSITION=1
+MODE="zoom"
 FIST_IMAGE=""
 PREVIOUS_IMAGE=""
 OPTION_SET=false
@@ -15,29 +16,33 @@ echo "NAME
 USAGE
 	gnome-dynamic-wallpaper 01.JPG 02.JPG 03.jpg 
 	gnome-dynamic-wallpaper 01.JPG 02.JPG 03.jpg > ~/.wallpaper.xml
-	gnome-dynamic-wallpaper -s *.jpg
-	gnome-dynamic-wallpaper -d 60 -t 5 -s *.jpg
+	gnome-dynamic-wallpaper --write *.jpg
+	gnome-dynamic-wallpaper --duration 60 --transition 5 --write --mode spanned *.jpg
 
 OPTIONS
 	-h, --help
 		Diplay this message.
 
-	-d N
+	--duration N
 		Set image duration in sec, default 60
 	
-	-t N
+	--mode zoom|spanned|wallpaper|centered|scaled|stretched|none
+		Rendering mode
+
+	--transition N
 		Set transition duration in sec, default 1
 
-	-s
+	--write
 		Writes output to $DEFAULT_FILE and use gsettings to use it.
 	
 "
 }
 while test -n "$1"; do
 	case $1 in 
-		-s) OPTION_SET=true ;;
-		-d) shift; DURATION="$1";;
-		-t) shift; TRANSITION="$1";;
+		--write) OPTION_SET=true ;;
+		--duration) shift; DURATION="$1";;
+		--transition) shift; TRANSITION="$1";;
+		--mode) shift; MODE="$1";;
 		-h|--help) __usage; exit 0;;
 		*) break;;
 	esac
@@ -61,4 +66,7 @@ if [ -n "$FIST_IMAGE" -a -n "$PREVIOUS_IMAGE" ]; then
 fi
 echo "</background>"
 
-test "$OPTION_SET" = "false" || gsettings set org.gnome.desktop.background picture-uri "file://$DEFAULT_FILE"
+if test "$OPTION_SET" = "true"; then
+	gsettings set org.gnome.desktop.background picture-uri "file://$DEFAULT_FILE"
+	gsettings set org.gnome.desktop.background picture-options $MODE
+fi
