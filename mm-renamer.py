@@ -11,12 +11,17 @@ from collections import OrderedDict
 from pathlib import Path
 from string import Formatter
 
-from termicolor import Style, print_red, print_style, tc_print
+from pytput import tput_print, print_color
 
-CONFIG_FILE = Path(os.getenv("MM_RENAMER_CONF", os.path.expanduser("~/.mm-renamer.json")))
+CONFIG_FILE = Path(
+    os.getenv("MM_RENAMER_CONF", os.path.expanduser("~/.mm-renamer.json"))
+)
 BUILTIN_FORMATS = OrderedDict(
     (
-        ("default", "{year}{month:0>2}{day:0>2}-{hour:0>2}{min:0>2}{sec:0>2}_{md5:.7}{ext:lower}"),
+        (
+            "default",
+            "{year}{month:0>2}{day:0>2}-{hour:0>2}{min:0>2}{sec:0>2}_{md5:.7}{ext:lower}",
+        ),
         ("md5", "{md5:.7}{ext:lower}"),
         ("sha1", "{sha1:.7}{ext:lower}"),
         ("lower", "{filename:lower}"),
@@ -29,7 +34,14 @@ EXIFTOOL_BIN = "exiftool"
 EXIFTOOL_ARGS = ("-exif:DateTimeOriginal", "-createDate")
 EXIFTOOL_FMT = "_%Y_%m_%d_%H_%M_%S_"
 EXIFTOOL_FIELDS = {"year": 1, "month": 2, "day": 3, "hour": 4, "min": 5, "sec": 6}
-HASH_FUNC = {"md5": hashlib.md5, "sha1": hashlib.sha1, "sha224": hashlib.sha224, "sha256": hashlib.sha256, "sha384": hashlib.sha384, "sha512": hashlib.sha512}
+HASH_FUNC = {
+    "md5": hashlib.md5,
+    "sha1": hashlib.sha1,
+    "sha224": hashlib.sha224,
+    "sha256": hashlib.sha256,
+    "sha384": hashlib.sha384,
+    "sha512": hashlib.sha512,
+}
 
 
 def get_hash(file: Path, func: callable):
@@ -48,15 +60,19 @@ def get_timestamp(file: Path):
         try:
             for arg in EXIFTOOL_ARGS:
                 cmd = [EXIFTOOL_BIN, arg, "-s3", "-d", EXIFTOOL_FMT, str(file)]
-                p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                p = subprocess.run(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+                )
                 if p.returncode == 0:
                     fields = p.stdout.decode().strip().split("_")
                     if len(fields) > max(EXIFTOOL_FIELDS.values()):
-                        return dict([(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()])
+                        return dict(
+                            [(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()]
+                        )
         except FileNotFoundError:
-            print_style(
+            print_color(
+                "red",
                 "Cannot find 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN",
-                styles=[Style.FG_WHITE, Style.BG_RED, Style.BOLD],
             )
             EXIFTOOL_BIN = None
     return {}
@@ -100,43 +116,88 @@ class MMFormatter(Formatter):
 if __name__ == "__main__":
     parser = ArgumentParser(description="File renamer")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("-l", "--list-formats", dest="format_list", action="store_true", help="List format samples")
-    group.add_argument("-f", "--format", dest="format_id", metavar="ID", default="default", choices=BUILTIN_FORMATS.keys(), help="use builtin format (see -l)")
-    group.add_argument("-F", "--custom-format", dest="format_custom", metavar="FORMAT", help="use custom format (see python str.format and -l)")
-    parser.add_argument("-n", "--dryrun", action="store_true", help="Dryrun mode, don't rename any file")
-    parser.add_argument("-o", "--output-folder", dest="output_folder", type=Path, help="rename files and move them to a specific folder")
-    parser.add_argument("files", nargs=argparse.ZERO_OR_MORE, type=Path, help="files to rename")
+    group.add_argument(
+        "-l",
+        "--list-formats",
+        dest="format_list",
+        action="store_true",
+        help="List format samples",
+    )
+    group.add_argument(
+        "-f",
+        "--format",
+        dest="format_id",
+        metavar="ID",
+        default="default",
+        choices=BUILTIN_FORMATS.keys(),
+        help="use builtin format (see -l)",
+    )
+    group.add_argument(
+        "-F",
+        "--custom-format",
+        dest="format_custom",
+        metavar="FORMAT",
+        help="use custom format (see python str.format and -l)",
+    )
+    parser.add_argument(
+        "-n", "--dryrun", action="store_true", help="Dryrun mode, don't rename any file"
+    )
+    parser.add_argument(
+        "-o",
+        "--output-folder",
+        dest="output_folder",
+        type=Path,
+        help="rename files and move them to a specific folder",
+    )
+    parser.add_argument(
+        "files", nargs=argparse.ZERO_OR_MORE, type=Path, help="files to rename"
+    )
     args = parser.parse_args()
 
     if CONFIG_FILE.is_file():
-        tc_print("{0:fg_cyan,bold} {1:fg_cyan}", "Using custom configuration file:", CONFIG_FILE)
+        tput_print(
+            "{0:cyan,bold} {1:cyan}", "Using custom configuration file:", CONFIG_FILE
+        )
         with CONFIG_FILE.open() as fp:
             user_formats = json.load(fp)
             BUILTIN_FORMATS.update(user_formats)
 
     if args.format_list:
         for k, v in BUILTIN_FORMATS.items():
-            tc_print("  {k:>15,bold}: '{v:half_bright}'", k=k, v=v)
+            tput_print("  {k:>15,bold}: '{v:dim}'", k=k, v=v)
     else:
         for source in args.files:
             if not source.is_file():
-                print_red("Invalid file: {source}".format(source=source))
+                print_color("red", "Invalid file: {source}".format(source=source))
                 continue
             try:
-                newname = MMFormatter(source).format(args.format_custom or BUILTIN_FORMATS[args.format_id])
+                newname = MMFormatter(source).format(
+                    args.format_custom or BUILTIN_FORMATS[args.format_id]
+                )
                 target = (args.output_folder or source.parent) / newname
                 if source == target:
-                    print_style("'{source}' already named".format(source=source), styles=[Style.FG_YELLOW])
+                    print_color(
+                        "yellow", "'{source}' already named".format(source=source)
+                    )
                 elif target.exists():
-                    print_red("'{source}' already exists".format(source=source))
+                    print_color(
+                        "red", "'{source}' already exists".format(source=source)
+                    )
                 else:
-                    print_style("'{source}' -> '{target}'".format(source=source, target=target), styles=[Style.FG_PURPLE if args.dryrun else Style.FG_GREEN])
+                    print_color(
+                        "purple" if args.dryrun else "green",
+                        "'{source}' -> '{target}'".format(source=source, target=target),
+                    )
                     if not args.dryrun:
                         if not target.parent.is_dir():
                             target.parent.mkdir(parents=True)
                         source.rename(target)
             except KeyboardInterrupt:
-                print_red("Process interrupted")
+                print_color("red", "Process interrupted")
                 sys.exit(1)
             except BaseException as e:
-                print_red("'{source}' cannot be renamed ({ex})".format(source=source, ex=e))
+                print_color(
+                    "red",
+                    "'{source}' cannot be renamed ({ex})".format(source=source, ex=e),
+                )
+
