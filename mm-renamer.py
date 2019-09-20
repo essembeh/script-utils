@@ -129,7 +129,6 @@ if __name__ == "__main__":
         dest="format_id",
         metavar="ID",
         default="default",
-        choices=BUILTIN_FORMATS.keys(),
         help="use builtin format (see -l)",
     )
     group.add_argument(
