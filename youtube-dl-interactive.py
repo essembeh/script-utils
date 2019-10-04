@@ -40,9 +40,13 @@ class YtdlFormat:
     def __lt__(self, other):
         if not isinstance(other, YtdlFormat):
             return NotImplemented
-        if self.extension == other.extension:
-            return self.code < other.code
-        return self.extension < other.extension
+        if self.resolution_tuple == other.resolution_tuple:
+            if self.fps == other.fps:
+                if self.bitrate == other.bitrate:
+                    return self.code < other.code
+                return self.bitrate < other.bitrate
+            return self.fps < other.fps
+        return self.resolution_tuple < other.resolution_tuple
 
     def __str__(self):
         if self.is_audio():
@@ -53,6 +57,21 @@ class YtdlFormat:
             "{i.code:yellow,bold,<3}  {i.extension:purple,>4}/{i.resolution:green,<12} {i.note:dim}",
             i=self,
         )
+
+    @property
+    def resolution_tuple(self):
+        m = re.fullmatch(r"(\d+)x(\d+)", self.resolution)
+        return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
+    @property
+    def fps(self):
+        m = re.search(r"(\d+)fps", self.note)
+        return int(m.group(1)) if m else 0
+
+    @property
+    def bitrate(self):
+        m = re.search(r"(\d+)k", self.note)
+        return int(m.group(1)) if m else 0
 
 
 def user_selection(question, formats):
