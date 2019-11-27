@@ -5,7 +5,12 @@ for FILE in "$@"; do
 	echo "----------[$FILE]----------"
 	if test -f "$FILE"; then
 		# Create a uniq target folder for extraction
-		TARGET=${FILE%.*}
+		TARGET="$(basename "$FILE")"
+		if [[ $TARGET == *.tar.* ]]; then
+			TARGET="./${TARGET%.tar.*}"
+		else 
+			TARGET="./${TARGET%.*}"
+		fi
 		if test -e "$TARGET"; then
 			TARGET="$TARGET.$RANDOM"
 		fi
