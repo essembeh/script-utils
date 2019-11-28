@@ -6,6 +6,7 @@ import tempfile
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 from urllib.request import urlopen
 from zipfile import ZipFile
@@ -16,18 +17,8 @@ from Levenshtein import distance
 from pytput import print_color, tput_format, tput_print
 
 
-def download_zip(url: str):
-    with tempfile.NamedTemporaryFile("w") as tmpzipfile:
-        # Download file
-        with open(tmpzipfile.name, "wb") as fp:
-            with urlopen(url) as stream:
-                fp.write(stream.read())
-        # Extract all members
-        zfolder = Path(tempfile.mkdtemp())
-        with ZipFile(tmpzipfile.name) as zf:
-            for l in zf.namelist():
-                zf.extract(l, path=zfolder)
-        return zfolder
+def url2path(url: str):
+    return Path(urlparse(url).path)
 
 
 class Element:
@@ -37,10 +28,10 @@ class Element:
         if isinstance(source, Path):
             value = source.name
         elif isinstance(source, str):
-            value = Path(urlparse(source).path).name
+            value = url2path(source).name
         for p in [
-            r"(?P<serie>.*)[. ]s(?P<season>[0-9]+)(e(?P<episode>[0-9]+))?(?P<keywords>.*)\.(?P<extension>\w+)",
-            r"(?P<serie>.*)[. ](?P<season>[0-9]+)(x(?P<episode>[0-9]+))?(?P<keywords>.*)\.(?P<extension>\w+)",
+            r"(?P<serie>.*)[. ]s(?P<season>[0-9]+)(e(?P<episode>[0-9]+))?(?P<keywords>.*)(\.(?P<extension>\w+))?",
+            r"(?P<serie>.*)[. ](?P<season>[0-9]+)(x(?P<episode>[0-9]+))?(?P<keywords>.*)(\.(?P<extension>\w+))?",
         ]:
             m = re.compile(p, flags=re.IGNORECASE).fullmatch(value)
             if m is not None:
@@ -115,7 +106,7 @@ class Element:
             fmt += "S{s.s:02}"
         if self.e > 0:
             fmt += "E{s.e:02}"
-        fmt += " [{s.keywords_txt}] ({s.extension})"
+        fmt += " ({s.keywords_txt})"
         return fmt.format(s=self)
 
     def to_color_str(self, other):
@@ -144,24 +135,50 @@ class Element:
         )
 
 
-class SteuFinder:
-    URL = "http://www.sous-titres.eu/series/"
-    SERIE_URL = URL + "{serie}.html"
+class SteuClient:
+    def __init__(self, tmpdir):
+        self.tmpdir = tmpdir
 
-    def find_all_srt(self, episode: Element):
-        serie_url = SteuFinder.SERIE_URL.format(serie=episode.serie.replace(" ", "_"))
+    @property
+    def base_url(self):
+        return "http://www.sous-titres.eu/series/"
+
+    def get_serie_url(self, serie: str):
+        return (self.base_url + "{0}.html").format(serie)
+
+    def download_file(self, url: str):
+        out = self.tmpdir / url2path(url).name
+        if out.exists():
+            return out
+        with out.open("wb") as fp:
+            with urlopen(url) as stream:
+                fp.write(stream.read())
+        return out
+
+    def download_zip(self, url: str):
+        zipfile = self.download_file(url)
+        zipfolder = self.tmpdir / (zipfile.name + ".d")
+        if zipfolder.exists():
+            return zipfolder
+        with ZipFile(zipfile) as zf:
+            for member in zf.namelist():
+                zf.extract(member, path=zipfolder)
+        return zipfolder
+
+    def find_all_srt(self, episode: Element) -> list:
+        serie_url = self.get_serie_url(episode.serie.replace(" ", "_"))
         out = []
         for link in BeautifulSoup(requests.get(serie_url).text, "html.parser").find_all(
             "a", href=re.compile(r"download/.*\.zip")
         ):
-            url = Element.parse(SteuFinder.URL + link["href"])
+            url = Element.parse(self.base_url + link["href"])
             if (
                 url is not None
                 and url.s == episode.s
                 and (url.e == 0 or url.e == episode.e)
             ):
                 for srt in filter(
-                    None, map(Element.parse, download_zip(url.source).iterdir())
+                    None, map(Element.parse, self.download_zip(url.source).iterdir())
                 ):
                     if srt.e == episode.e:
                         out.append(srt)
@@ -169,7 +186,7 @@ class SteuFinder:
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="sous-titre.eu client")
+    parser = ArgumentParser(description="command line client for www.sous-titres.eu")
     parser.add_argument(
         "-a",
         "--auto",
@@ -185,40 +202,45 @@ if __name__ == "__main__":
     parser.add_argument("files", type=Path, nargs="*", help="episodes")
 
     args = parser.parse_args()
-    finder = SteuFinder()
-    for file in args.files:
-        try:
-            episode = Element.parse(file)
-            if episode is None:
-                raise ValueError("Not a valid episode: " + episode)
-            tput_print("Search subtitles for {0:purple,bold}", file.name)
-            subtitle = episode.source.parent / (episode.source.stem + ".srt")
-            if subtitle.exists() and not args.force:
-                raise ValueError(
-                    "File {0} already exists, use --force to overwrite".format(subtitle)
+    with TemporaryDirectory() as tmppath:
+        finder = SteuClient(Path(tmppath))
+        for file in args.files:
+            try:
+                episode = Element.parse(file)
+                if episode is None:
+                    raise ValueError("Not a valid episode: {0.name}".format(file))
+                tput_print("Search subtitles for {0:purple,bold}", file.name)
+                subtitle = episode.source.parent / (episode.source.name + ".srt")
+                if episode.source.suffix.lower() in (".mkv", ".avi", ".mpg", ".mp4"):
+                    subtitle = episode.source.parent / (episode.source.stem + ".srt")
+                if subtitle.exists() and not args.force:
+                    raise ValueError(
+                        "File {0} already exists, use --force to overwrite".format(
+                            subtitle
+                        )
+                    )
+                srtlist = sorted(
+                    finder.find_all_srt(episode), key=partial(Element.distance, episode)
                 )
-            srtlist = sorted(
-                finder.find_all_srt(episode), key=partial(Element.distance, episode)
-            )
-            if len(srtlist) == 0:
-                raise ValueError("Cannot find any subtitle for {0}".format(episode))
-            for i in range(0, len(srtlist)):
-                srt = srtlist[i]
-                print("[{0}]".format(i), srt.to_color_str(episode))
-            selection = srtlist[0] if args.auto else None
-            while selection is None:
-                print("Select a file [0-{0}] ? ".format(len(srtlist)), end="")
-                answer = input().strip()
-                try:
-                    selection = srtlist[int(answer)]
-                except:
-                    pass
-            print("Using:", selection)
-            if subtitle.exists():
-                tput_print("Overwrite file {0:yellow,bold}", subtitle)
-            else:
-                tput_print("Create file {0:yellow,bold}", subtitle)
-            shutil.copy(str(selection.source), str(subtitle))
-        except BaseException as e:
-            print_color("red", e)
-        print()
+                if len(srtlist) == 0:
+                    raise ValueError("Cannot find any subtitle for {0}".format(episode))
+                for i in range(0, len(srtlist)):
+                    srt = srtlist[i]
+                    print("[{0}]".format(i), srt.to_color_str(episode))
+                selection = srtlist[0] if args.auto else None
+                while selection is None:
+                    print("Select a file [0-{0}] ? ".format(len(srtlist)), end="")
+                    answer = input().strip()
+                    try:
+                        selection = srtlist[int(answer)]
+                    except:
+                        pass
+                print("Using:", selection.source)
+                if subtitle.exists():
+                    tput_print("Overwrite file {0:yellow,bold}", subtitle)
+                else:
+                    tput_print("Create file {0:yellow,bold}", subtitle)
+                shutil.copy(str(selection.source), str(subtitle))
+            except BaseException as e:
+                print_color("red", e)
+            print()

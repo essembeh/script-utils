@@ -5,32 +5,36 @@ for FILE in "$@"; do
 	echo "----------[$FILE]----------"
 	if test -f "$FILE"; then
 		# Create a uniq target folder for extraction
-		TARGET="$(basename "$FILE")"
-		if [[ $TARGET == *.tar.* ]]; then
-			TARGET="./${TARGET%.tar.*}"
-		else 
-			TARGET="./${TARGET%.*}"
-		fi
-		if test -e "$TARGET"; then
-			TARGET="$TARGET.$RANDOM"
-		fi
-		mkdir -v "$TARGET"
+		FILENAME="$(basename "$FILE")"
+		WORKDIR="./$FILENAME.d"
+		while test -e "$WORKDIR"; do
+			WORKDIR="./$FILENAME.$RANDOM"
+		done
+		mkdir -v "$WORKDIR"
 		# Extract file using tar or 7z
-		case "$(basename "$FILE")" in
+		case "$FILENAME" in
 			*.tar|*.tar.*|*.tgz)
-				tar -C "$TARGET" -xavf "$FILE"
+				tar -C "$WORKDIR" -xavf "$FILE"
 				;;
 			*)
-				7z x -o"$TARGET" "$FILE"
+				7z x -o"$WORKDIR" "$FILE"
 				;;
 		esac
 		# Check if archive only contains one folder/file
-		FILES=$(ls -A1 "$TARGET" 2>/dev/null)
-		if test $(echo "$FILES" | wc -l) -eq 1; then
-			NEWTARGET="$(dirname "$FILE")/$FILES"
-			if ! test -e "$NEWTARGET"; then
-				mv -nv "$TARGET/$FILES" "$NEWTARGET"
-				rmdir -v "$TARGET"
+		CONTENT=$(ls -A1 "$WORKDIR" 2>/dev/null)
+		if test $(echo "$CONTENT" | wc -l) -eq 1; then
+			if ! test -e "./$CONTENT"; then
+				mv -nv "$WORKDIR/$CONTENT" "./$CONTENT"
+				rmdir -v "$WORKDIR"
+			fi
+		else
+			# Try to rename the target folder
+			TARGET="./${FILENAME%.*}"
+			if [[ $FILENAME == *.tar.* ]]; then
+				TARGET="./${FILENAME%.tar.*}"
+			fi
+			if ! test -e "$TARGET"; then
+				mv -nv "$WORKDIR" "$TARGET"
 			fi
 		fi
 	fi
