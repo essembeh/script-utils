@@ -6,7 +6,7 @@ import subprocess
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from functools import total_ordering
-from pytput import tput_format, tput_print
+from pytput import Style, strcolor
 
 
 @dataclass
@@ -49,14 +49,12 @@ class YtdlFormat:
         return self.resolution_tuple < other.resolution_tuple
 
     def __str__(self):
-        if self.is_audio():
-            return tput_format(
-                "{i.code:yellow,bold,<3}  {i.extension:purple,<6} {i.note:dim}", i=self
-            )
-        return tput_format(
-            "{i.code:yellow,bold,<3}  {i.extension:purple,>4}/{i.resolution:green,<12} {i.note:dim}",
-            i=self,
+        fmt = (
+            "{i.code:yellow,bold,<3}  {i.extension:purple,<6} {i.note:dim}"
+            if self.is_audio()
+            else "{i.code:yellow,bold,<3}  {i.extension:purple,>4}/{i.resolution:green,<12} {i.note:dim}"
         )
+        return strcolor(fmt).format(i=self)
 
     @property
     def resolution_tuple(self):
@@ -127,21 +125,23 @@ if __name__ == "__main__":
         ]
 
         if len(selected_formats) == 0:
-            print_red("No format selected")
+            print(Style.RED.apply("No format selected"))
             exit(3)
         download_cmd = (
             ["youtube-dl", "-f", "+".join(map(str, selected_formats))] + uargs + [url]
         )
-        tput_print(
-            "{msg:bold}\n  $ {cmd}\n",
-            msg="Download video using custom formats:",
-            cmd=" ".join(map(shlex.quote, download_cmd)),
+        print(
+            strcolor("{msg:bold}\n  $ {cmd}\n").format(
+                msg="Download video using custom formats:",
+                cmd=" ".join(map(shlex.quote, download_cmd)),
+            )
         )
         subprocess.run(download_cmd, check=True)
     else:
-        tput_print(
-            "{error:red}\n  $ {cmd}",
-            error="Cannot retrieve formats using command:",
-            cmd=" ".join(map(shlex.quote, listformats_cmd)),
+        print(
+            strcolor("{error:red}\n  $ {cmd}").format(
+                error="Cannot retrieve formats using command:",
+                cmd=" ".join(map(shlex.quote, listformats_cmd)),
+            )
         )
         exit(3)

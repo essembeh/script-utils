@@ -11,7 +11,7 @@ from collections import OrderedDict
 from pathlib import Path
 from string import Formatter
 
-from pytput import tput_print, print_color
+from pytput import Style, strcolor
 
 CONFIG_FILE = Path(
     os.getenv("MM_RENAMER_CONF", os.path.expanduser("~/.mm-renamer.json"))
@@ -70,9 +70,10 @@ def get_timestamp(file: Path):
                             [(k, int(fields[v])) for k, v in EXIFTOOL_FIELDS.items()]
                         )
         except FileNotFoundError:
-            print_color(
-                "red",
-                "Cannot find 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN",
+            print(
+                Style.RED.apply(
+                    "Cannot find 'exiftool' in PATH, run 'sudo apt-get install libimage-exiftool-perl' or set EXIFTOOL_BIN"
+                )
             )
             EXIFTOOL_BIN = None
     return {}
@@ -154,8 +155,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if CONFIG_FILE.is_file():
-        tput_print(
-            "{0:cyan,bold} {1:cyan}", "Using custom configuration file:", CONFIG_FILE
+        print(
+            strcolor("{0:cyan,bold} {1:cyan}").format(
+                "Using custom configuration file:", CONFIG_FILE
+            )
         )
         with CONFIG_FILE.open() as fp:
             user_formats = json.load(fp)
@@ -163,11 +166,11 @@ if __name__ == "__main__":
 
     if args.format_list:
         for k, v in BUILTIN_FORMATS.items():
-            tput_print("  {k:>15,bold}: '{v:dim}'", k=k, v=v)
+            print(strcolor("  {k:>15,bold}: '{v:dim}'").format(k=k, v=v))
     else:
         for source in args.files:
             if not source.is_file():
-                print_color("red", "Invalid file: {source}".format(source=source))
+                print(Style.RED.apply("Invalid file: {source}".format(source=source)))
                 continue
             try:
                 newname = MMFormatter(source).format(
@@ -175,28 +178,39 @@ if __name__ == "__main__":
                 )
                 target = (args.output_folder or source.parent) / newname
                 if source == target:
-                    print_color(
-                        "yellow", "'{source}' already named".format(source=source)
+                    print(
+                        Style.YELLOW.apply(
+                            "'{source}' already named".format(source=source)
+                        )
                     )
                 elif target.exists():
-                    print_color(
-                        "red", "'{source}' already exists".format(source=source)
+                    print(
+                        Style.RED.apply(
+                            "'{source}' already exists".format(source=source)
+                        )
                     )
                 else:
-                    print_color(
-                        "purple" if args.dryrun else "green",
-                        "'{source}' -> '{target}'".format(source=source, target=target),
+                    style = Style.PURPLE if args.dryrun else Style.GREEN
+                    print(
+                        style.apply(
+                            "'{source}' -> '{target}'".format(
+                                source=source, target=target
+                            )
+                        )
                     )
                     if not args.dryrun:
                         if not target.parent.is_dir():
                             target.parent.mkdir(parents=True)
                         source.rename(target)
             except KeyboardInterrupt:
-                print_color("red", "Process interrupted")
+                print(Style.RED.apply("Process interrupted"))
                 sys.exit(1)
             except BaseException as e:
-                print_color(
-                    "red",
-                    "'{source}' cannot be renamed ({ex})".format(source=source, ex=e),
+                print(
+                    Style.RED.apply(
+                        "'{source}' cannot be renamed ({ex})".format(
+                            source=source, ex=e
+                        )
+                    )
                 )
 

@@ -2,7 +2,6 @@
 
 import re
 import shutil
-import tempfile
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
@@ -14,7 +13,8 @@ from zipfile import ZipFile
 import requests
 from bs4 import BeautifulSoup
 from Levenshtein import distance
-from pytput import print_color, tput_format, tput_print
+from pytput import strcolor
+from pytput.style import Style
 
 
 def url2path(url: str):
@@ -110,19 +110,21 @@ class Element:
         return fmt.format(s=self)
 
     def to_color_str(self, other):
-        fmt = ""
-        fmt += tput_format("  (-> {0:2,yellow}) ", self.distance(other))
-        fmt += "'{s.serie:%s}' " % ("green" if self.serie == other.serie else "red")
-        fmt += "{s.number:%s} " % ("green" if self.number == other.number else "red")
-        fmt += " " + ".".join(
-            [
-                tput_format(
-                    "{0:%s}" % ("green" if k in other.keywords_list else "red"), k
-                )
-                for k in self.keywords_list
-            ]
+        def withstyle(text, cond):
+            s = Style.GREEN if cond else Style.RED
+            return s.apply(text)
+
+        out = ""
+        out += strcolor("(-> {0:2,yellow}) ").format(self.distance(other))
+
+        out += "'{0}' {1}  ".format(
+            withstyle(self.serie, self.serie == other.serie),
+            withstyle(self.number, self.number == other.number),
         )
-        return tput_format(fmt, s=self)
+        out += " " + ".".join(
+            map(lambda k: withstyle(k, k in other.keywords_list), self.keywords_list)
+        )
+        return out
 
     def distance(self, other):
         return (
@@ -209,7 +211,10 @@ if __name__ == "__main__":
                 episode = Element.parse(file)
                 if episode is None:
                     raise ValueError("Not a valid episode: {0.name}".format(file))
-                tput_print("Search subtitles for {0:purple,bold}", file.name)
+                print(
+                    "Search subtitles for",
+                    strcolor("{0:purple,bold}").format(file.name),
+                )
                 subtitle = episode.source.parent / (episode.source.name + ".srt")
                 if episode.source.suffix.lower() in (".mkv", ".avi", ".mpg", ".mp4"):
                     subtitle = episode.source.parent / (episode.source.stem + ".srt")
@@ -233,14 +238,16 @@ if __name__ == "__main__":
                     answer = input().strip()
                     try:
                         selection = srtlist[int(answer)]
-                    except:
+                    except BaseException:
                         pass
                 print("Using:", selection.source)
                 if subtitle.exists():
-                    tput_print("Overwrite file {0:yellow,bold}", subtitle)
+                    print(
+                        "Overwrite file", strcolor("{0:yellow,bold}").format(subtitle)
+                    )
                 else:
-                    tput_print("Create file {0:yellow,bold}", subtitle)
+                    print("Create file", strcolor("{0:yellow,bold}").format(subtitle))
                 shutil.copy(str(selection.source), str(subtitle))
             except BaseException as e:
-                print_color("red", e)
+                print(Style.RED.apply(e))
             print()

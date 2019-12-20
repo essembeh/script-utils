@@ -223,6 +223,7 @@ class Playlist(JsonObject):
         i = requests.get(plUrl).iter_lines()
         out = OrderedDict()
         for line in i:
+            print("###", line)
             m = Playlist.COMMENT_PATTERN.match(line.decode())
             if m is not None:
                 out[(int(m.group(1)), int(m.group(2)))] = next(i).decode()
@@ -230,6 +231,8 @@ class Playlist(JsonObject):
 
     def getUrl(self, https=False, quality=None):
         urls = self.getUrls(https)
+        for url in urls:
+            print(">>>", url)
         if quality is not None and quality not in urls:
             print("Cannot find quality", quality)
             quality = None
