@@ -17,6 +17,9 @@ from pytput import strcolor
 from pytput.style import Style
 
 
+VIDEO_EXTENSIONS = (".mkv", ".mp4", ".avi", ".mpg", ".mpeg", ".mov")
+
+
 def url2path(url: str):
     return Path(urlparse(url).path)
 
@@ -187,67 +190,93 @@ class SteuClient:
         return out
 
 
+def handle_file(file: Path, overwrite: bool, auto_choose: bool):
+    episode = Element.parse(file)
+    if episode is None:
+        raise ValueError("Not a valid episode: {0.name}".format(file))
+    print("Search subtitles for", strcolor("{0:purple,bold}").format(file.name))
+    subtitle = episode.source.parent / (episode.source.stem + ".srt")
+    if subtitle.exists() and not overwrite:
+        raise ValueError(
+            "File {0} already exists, use --force to overwrite".format(subtitle)
+        )
+    srtlist = sorted(
+        finder.find_all_srt(episode), key=partial(Element.distance, episode)
+    )
+    if len(srtlist) == 0:
+        raise ValueError("Cannot find any subtitle for {0}".format(episode))
+    for i in range(0, len(srtlist)):
+        srt = srtlist[i]
+        print("[{0}]".format(i), srt.to_color_str(episode))
+    selection = srtlist[0] if auto_choose else None
+    while selection is None:
+        print("Select a file [0-{0}] ? ".format(len(srtlist)), end="")
+        answer = input().strip()
+        try:
+            selection = srtlist[int(answer)]
+        except BaseException:
+            pass
+    print("Using:", selection.source)
+    if subtitle.exists():
+        print("Overwrite file", strcolor("{0:yellow,bold}").format(subtitle))
+    else:
+        print("Create file", strcolor("{0:yellow,bold}").format(subtitle))
+    shutil.copy(str(selection.source), str(subtitle))
+    print("")
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="command line client for www.sous-titres.eu")
     parser.add_argument(
         "-a",
         "--auto",
+        dest="auto_choose",
         action="store_true",
         help="automatically choose the best subtitle",
     )
     parser.add_argument(
+        "-r",
+        "--recursive",
+        action="store_true",
+        help="process all files contained in folders",
+    )
+    parser.add_argument(
         "-f",
         "--force",
+        dest="overwrite",
         action="store_true",
         help="overwrite subtitle if file already exists",
     )
+    parser.add_argument(
+        "--all",
+        dest="check_extension",
+        action="store_false",
+        help="do not ignore files if extension is not in {0}".format(
+            ",".join(VIDEO_EXTENSIONS)
+        ),
+    )
     parser.add_argument("files", type=Path, nargs="*", help="episodes")
-
     args = parser.parse_args()
+
+    visited = []
+
+    def myvisitor(files):
+        for f in files:
+            if isinstance(f, Path) and f not in visited:
+                visited.append(f)
+                if f.is_dir():
+                    if args.recursive:
+                        yield from myvisitor(sorted(f.iterdir()))
+                elif not args.check_extension or f.suffix.lower() in VIDEO_EXTENSIONS:
+                    yield f
+
     with TemporaryDirectory() as tmppath:
         finder = SteuClient(Path(tmppath))
-        for file in args.files:
+        for file in myvisitor(args.files):
             try:
-                episode = Element.parse(file)
-                if episode is None:
-                    raise ValueError("Not a valid episode: {0.name}".format(file))
-                print(
-                    "Search subtitles for",
-                    strcolor("{0:purple,bold}").format(file.name),
-                )
-                subtitle = episode.source.parent / (episode.source.name + ".srt")
-                if episode.source.suffix.lower() in (".mkv", ".avi", ".mpg", ".mp4"):
-                    subtitle = episode.source.parent / (episode.source.stem + ".srt")
-                if subtitle.exists() and not args.force:
-                    raise ValueError(
-                        "File {0} already exists, use --force to overwrite".format(
-                            subtitle
-                        )
-                    )
-                srtlist = sorted(
-                    finder.find_all_srt(episode), key=partial(Element.distance, episode)
-                )
-                if len(srtlist) == 0:
-                    raise ValueError("Cannot find any subtitle for {0}".format(episode))
-                for i in range(0, len(srtlist)):
-                    srt = srtlist[i]
-                    print("[{0}]".format(i), srt.to_color_str(episode))
-                selection = srtlist[0] if args.auto else None
-                while selection is None:
-                    print("Select a file [0-{0}] ? ".format(len(srtlist)), end="")
-                    answer = input().strip()
-                    try:
-                        selection = srtlist[int(answer)]
-                    except BaseException:
-                        pass
-                print("Using:", selection.source)
-                if subtitle.exists():
-                    print(
-                        "Overwrite file", strcolor("{0:yellow,bold}").format(subtitle)
-                    )
-                else:
-                    print("Create file", strcolor("{0:yellow,bold}").format(subtitle))
-                shutil.copy(str(selection.source), str(subtitle))
+                handle_file(file, args.overwrite, args.auto_choose)
+            except KeyboardInterrupt:
+                exit(1)
             except BaseException as e:
                 print(Style.RED.apply(e))
-            print()
+                print()
