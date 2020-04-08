@@ -205,7 +205,7 @@ class SubtitleDownloader:
     steucli: SteuClient
 
     def handle_file(
-        self, element: Element, auto_choose: bool = True, serie_name: str = None,
+        self, element: Element, interactive: bool = True, serie_name: str = None,
     ):
         print("Search subtitles for", strcolor("{0:purple,bold}").format(file.name))
         subtitle = element.srt_file
@@ -220,7 +220,7 @@ class SubtitleDownloader:
         for i in range(0, len(srtlist)):
             srt = srtlist[i]
             print("[{0}]".format(i), srt.to_color_str(element))
-        selection = srtlist[0] if auto_choose else None
+        selection = None if interactive else srtlist[0]
         while selection is None:
             print("Select a file [0-{0}] ? ".format(len(srtlist)), end="")
             answer = input().strip()
@@ -240,9 +240,8 @@ class SubtitleDownloader:
 if __name__ == "__main__":
     parser = ArgumentParser(description="command line client for www.sous-titres.eu")
     parser.add_argument(
-        "-a",
-        "--auto",
-        dest="auto_choose",
+        "-i",
+        "--interactive",
         action="store_true",
         help="automatically choose the best subtitle",
     )
@@ -286,7 +285,7 @@ if __name__ == "__main__":
                     if args.overwrite or not episode.srt_file.exists():
                         downloader.handle_file(
                             episode,
-                            auto_choose=args.auto_choose,
+                            interactive=args.interactive,
                             serie_name=args.serie_name,
                         )
             except KeyboardInterrupt:
