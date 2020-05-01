@@ -43,7 +43,6 @@ if __name__ == "__main__":
         "--remote-port",
         dest="remote_port",
         type=int,
-        default=22,
         metavar="PORT",
         help="remote server ssh port",
     )
@@ -110,18 +109,18 @@ if __name__ == "__main__":
     )
 
     # Build the command line
-    command = [
-        "ssh",
-        "-p",
-        args.remote_port,
+    command = ["ssh"]
+    if args.remote_port:
+        command += ["-p", args.remote_port]
+    if args.tty:
+        # Force the TTY
+        command.append("-t")
+    command += [
         "-A",  # Enables forwarding of the authentication agent connection
         "-R",  # Create the tunnel
         "{args.ssh_tunnel}:{args.local_host}:{args.local_port}".format(args=args),
         args.remote_host,
     ]
-    if args.tty:
-        # Force the TTY
-        command.append("-t")
     command += [
         "BORG_REPO={0}".format(borg_repo),
         "borg",
