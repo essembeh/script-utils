@@ -88,7 +88,7 @@ if __name__ == "__main__":
         help="retry N times in case of error (default is 0)",
     )
     parser.add_argument(
-        "items", type=Path, metavar="FILE", help="file containing elements to open",
+        "items", type=Path, metavar="FILE", help="file containing elements to open"
     )
     args = parser.parse_args()
 
@@ -118,12 +118,14 @@ if __name__ == "__main__":
                 else:
                     if args.non_interactive or input(
                         "Execute {label} (Y/n) ".format(label=label)
-                    ).strip().lower() in ("", "y",):
+                    ).strip().lower() in ("", "y"):
                         if execute(
                             command, label, args.retry, args.delay, verbose=True
                         ):
                             done_list.append(line)
                 sleep(args.delay)
+    except KeyboardInterrupt:
+        pass
     finally:
         if len(done_list) > 0 and args.done_file is not None:
             with args.done_file.open("w") as fp:
