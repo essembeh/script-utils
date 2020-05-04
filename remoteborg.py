@@ -1,4 +1,5 @@
-#!/bin/env python3
+#!/usr/bin/python3
+
 import argparse
 import os
 import shlex
@@ -121,10 +122,7 @@ if __name__ == "__main__":
         "{args.ssh_tunnel}:{args.local_host}:{args.local_port}".format(args=args),
         args.remote_host,
     ]
-    command += [
-        "BORG_REPO={0}".format(borg_repo),
-        "borg",
-    ]
+    command += ["BORG_REPO={0}".format(borg_repo), "borg"]
     if args.args_file:
         with args.args_file.open() as fp:
             command += list(
