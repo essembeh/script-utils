@@ -6,7 +6,7 @@ import subprocess
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from functools import total_ordering
-from pytput import Style, strcolor
+from pytput import Style, tput_format, tput_print
 
 
 @dataclass
@@ -54,7 +54,7 @@ class YtdlFormat:
             if self.is_audio()
             else "{i.code:yellow,bold,<3}  {i.extension:purple,>4}/{i.resolution:green,<12} {i.note:dim}"
         )
-        return strcolor(fmt).format(i=self)
+        return tput_format(fmt, i=self)
 
     @property
     def resolution_tuple(self):
@@ -130,18 +130,16 @@ if __name__ == "__main__":
         download_cmd = (
             ["youtube-dl", "-f", "+".join(map(str, selected_formats))] + uargs + [url]
         )
-        print(
-            strcolor("{msg:bold}\n  $ {cmd}\n").format(
-                msg="Download video using custom formats:",
-                cmd=" ".join(map(shlex.quote, download_cmd)),
-            )
+        tput_print(
+            "{msg:bold}\n  $ {cmd}\n",
+            msg="Download video using custom formats:",
+            cmd=" ".join(map(shlex.quote, download_cmd)),
         )
         subprocess.run(download_cmd, check=True)
     else:
-        print(
-            strcolor("{error:red}\n  $ {cmd}").format(
-                error="Cannot retrieve formats using command:",
-                cmd=" ".join(map(shlex.quote, listformats_cmd)),
-            )
+        tput_print(
+            "{error:red}\n  $ {cmd}",
+            error="Cannot retrieve formats using command:",
+            cmd=" ".join(map(shlex.quote, listformats_cmd)),
         )
         exit(3)

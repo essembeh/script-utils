@@ -15,8 +15,7 @@ from bs4 import BeautifulSoup
 from Levenshtein import distance
 
 import requests
-from pytput import strcolor
-from pytput.style import Style
+from pytput import tput_print, Style, tput_format
 
 VIDEO_EXTENSIONS = ("mkv", "mp4", "avi", "mpg", "mpeg", "mov")
 
@@ -123,7 +122,7 @@ class Element:
             return s.apply(text)
 
         out = ""
-        out += strcolor("(d={0:2,yellow}) ").format(self.distance(other))
+        out += tput_format("(d={0:2,yellow}) ", self.distance(other))
 
         out += "'{0}' {1}  ".format(
             withstyle(self.serie, self.serie == other.serie),
@@ -207,7 +206,7 @@ class SubtitleDownloader:
     def handle_file(
         self, element: Element, interactive: bool = True, serie_name: str = None,
     ):
-        print("Search subtitles for", strcolor("{0:purple,bold}").format(file.name))
+        tput_print("Search subtitles for {0:purple,bold}", file.name)
         subtitle = element.srt_file
         srtlist = sorted(
             self.steucli.find_all_srt(
@@ -230,9 +229,9 @@ class SubtitleDownloader:
                 pass
         print("Using:", selection.source)
         if subtitle.exists():
-            print("Overwrite file", strcolor("{0:yellow,bold}").format(subtitle))
+            tput_print("Overwrite file {0:yellow,bold}", subtitle)
         else:
-            print("Create file", strcolor("{0:yellow,bold}").format(subtitle))
+            print("Create file {0:yellow,bold}", subtitle)
         shutil.copy(str(selection.source), str(subtitle))
         print("")
 

@@ -11,7 +11,7 @@ from collections import OrderedDict
 from pathlib import Path
 from string import Formatter
 
-from pytput import Style, strcolor
+from pytput import Style, tput_print
 
 CONFIG_FILE = Path(
     os.getenv("MM_RENAMER_CONF", os.path.expanduser("~/.mm-renamer.json"))
@@ -155,10 +155,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if CONFIG_FILE.is_file():
-        print(
-            strcolor("{0:cyan,bold} {1:cyan}").format(
-                "Using custom configuration file:", CONFIG_FILE
-            )
+        tput_print(
+            "{'Using custom configuration file':cyan,bold} {0:cyan}", CONFIG_FILE
         )
         with CONFIG_FILE.open() as fp:
             user_formats = json.load(fp)
@@ -166,7 +164,7 @@ if __name__ == "__main__":
 
     if args.format_list:
         for k, v in BUILTIN_FORMATS.items():
-            print(strcolor("  {k:>15,bold}: '{v:dim}'").format(k=k, v=v))
+            tput_print("  {k:>15,bold}: '{v:dim}'", k=k, v=v)
     else:
         for source in args.files:
             if not source.is_file():
@@ -213,4 +211,3 @@ if __name__ == "__main__":
                         )
                     )
                 )
-
