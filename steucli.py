@@ -231,7 +231,7 @@ class SubtitleDownloader:
         if subtitle.exists():
             tput_print("Overwrite file {0:yellow,bold}", subtitle)
         else:
-            print("Create file {0:yellow,bold}", subtitle)
+            tput_print("Create file {0:yellow,bold}", subtitle)
         shutil.copy(str(selection.source), str(subtitle))
         print("")
 
