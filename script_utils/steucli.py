@@ -204,7 +204,10 @@ class SubtitleDownloader:
     steucli: SteuClient
 
     def handle_file(
-        self, element: Element, interactive: bool = True, serie_name: str = None,
+        self,
+        element: Element,
+        interactive: bool = True,
+        serie_name: str = None,
     ):
         tput_print("Search subtitles for {0:purple,bold}", file.name)
         subtitle = element.srt_file

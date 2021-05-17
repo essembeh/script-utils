@@ -20,7 +20,7 @@ while [ -n "$1" ]; do
 			;;
 		-l|--last)
 			shift
-			YTDL_ARGS+=( "--playlist-end" "20" )
+			YTDL_ARGS+=( "--playlist-end" "10" )
 			;;
 		-q|--quiet)
 			shift

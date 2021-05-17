@@ -1,16 +1,17 @@
 #!/bin/bash
+set -eu
 
-if ! test `whoami` = "root"; then
+if ! test "$(whoami)" = "root"; then
 	echo "This script must be ran as root"
 	exit 1
 fi
 
-while test -n "$1"; do
-	case "$1" in
+for DEV in "$@"; do
+	case "$DEV" in
 		sd?)
-			DELETE_FILE="/sys/block/$1/device/delete"
+			DELETE_FILE="/sys/block/$DEV/device/delete"
 			if test -f "$DELETE_FILE"; then
-				if `mount | grep -q "^/dev/$1"`; then
+				if mount | grep -q "^/dev/$DEV"; then
 					echo "The drive seems to have mounted partitions, umount them before unplug"
 				else
 					echo "echo 1 > $DELETE_FILE in 3 seconds"
@@ -27,7 +28,7 @@ while test -n "$1"; do
 			fi
 			;;
 		*)
-			echo "Wrong drive $1, works on sdX only"
+			echo "Wrong drive $DEV, works on sdX only"
 			;;
 	esac
 	shift

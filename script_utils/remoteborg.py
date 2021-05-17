@@ -105,8 +105,8 @@ if __name__ == "__main__":
             file=sys.stderr,
         )
         sys.exit(1)
-    borg_repo = "ssh://{args.local_user}@{args.local_host}:{args.ssh_tunnel}{dir}".format(
-        args=args, dir=borg_repo_dir
+    borg_repo = (
+        f"ssh://{args.local_user}@{args.local_host}:{args.ssh_tunnel}{borg_repo_dir}"
     )
 
     # Build the command line

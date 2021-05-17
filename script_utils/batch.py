@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import shlex
 import signal
@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from time import sleep
 
-from pytput import Style
+from colorama import Fore
 
 
 def on_signal(*args, **kwargs):
@@ -31,23 +31,17 @@ def transition(prefix: str, label: str, interactive: bool, timeout: int):
         signal.alarm(timeout)
         try:
             input(
-                "{prefix} Press ENTER or wait {timeout} seconds to execute: {label} ".format(
-                    label=label, timeout=timeout, prefix=prefix
-                )
+                f"{prefix} Press ENTER or wait {timeout} seconds to execute: {label} "
             )
-        except TimeoutError as e:
+        except TimeoutError:
             print("")
         finally:
             signal.alarm(0)
     else:
         if interactive:
-            input(
-                "{prefix} Press ENTER to execute: {label} ".format(
-                    label=label, prefix=prefix
-                )
-            )
+            input(f"{prefix} Press ENTER to execute: {label} ")
         else:
-            print("{prefix} Execute:  {label}".format(label=label, prefix=prefix))
+            print(f"{prefix} Execute:  {label}")
 
 
 def execute(
@@ -55,9 +49,9 @@ def execute(
 ):
     process = subprocess.run(command)
     if process.returncode == 0:
-        print(Style.GREEN.apply("OK"), label)
+        print(f"{Fore.GREEN}OK{Fore.RESET} {label}")
         return True
-    print(Style.RED.apply("ERROR"), label)
+    print(f"{Fore.RED}ERROR{Fore.RESET} {label}")
     if retry > 0:
         sleep(retry_delay)
         return execute(command, label, retry - 1, verbose=verbose)
@@ -133,9 +127,7 @@ if __name__ == "__main__":
                 if line not in done_list:
                     done_list.append(line)
         print(
-            "Load {count} items from {file}".format(
-                file=Style.PURPLE.apply(args.done_file), count=len(done_list)
-            )
+            f"Load {len(done_list)} items from {Fore.MAGENTA}{args.done_file}{Fore.RESET}"
         )
 
     try:
@@ -144,17 +136,17 @@ if __name__ == "__main__":
             content = my_filter(fp) if args.follow else list(my_filter(fp.readlines()))
             for line in content:
                 prefix = (
-                    "[{0}/{1}]".format(count, len(content))
+                    f"[{count}/{len(content)}]"
                     if isinstance(content, list)
-                    else "[{0}]".format(count)
+                    else f"[{count}]"
                 )
                 command = args.command + [line]
-                label = Style.YELLOW.apply(" ".join(map(shlex.quote, command)))
+                label = Fore.YELLOW + " ".join(map(shlex.quote, command)) + Fore.RESET
                 if args.skip > 0:
-                    print(prefix, Style.CYAN.apply("SKIP"), label)
+                    print(f"{prefix} {Fore.CYAN}SKIP{Fore.RESET} {label}")
                     args.skip -= 1
                 elif line in done_list:
-                    print(prefix, Style.CYAN.apply("IGNORE"), label)
+                    print(f"{prefix} {Fore.CYAN}IGNORE{Fore.RESET} {label}")
                 else:
                     transition(
                         prefix, label, args.interactive, args.delay if count > 1 else 0
@@ -169,7 +161,5 @@ if __name__ == "__main__":
             with args.done_file.open("w") as fp:
                 fp.write("\n".join(done_list))
             print(
-                "Save {count} items in {file}".format(
-                    file=Style.PURPLE.apply(args.done_file), count=len(done_list)
-                )
+                f"Save {len(done_list)} items in {Fore.MAGENTA}{args.done_file}{Fore.RESET}"
             )

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import re
 import shlex
@@ -6,7 +6,8 @@ import subprocess
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from functools import total_ordering
-from pytput import Style, tput_format, tput_print
+
+from colorama import Fore, Style
 
 
 @dataclass
@@ -49,12 +50,13 @@ class YtdlFormat:
         return self.resolution_tuple < other.resolution_tuple
 
     def __str__(self):
-        fmt = (
-            "{i.code:yellow,bold,<3}  {i.extension:purple,<6} {i.note:dim}"
-            if self.is_audio()
-            else "{i.code:yellow,bold,<3}  {i.extension:purple,>4}/{i.resolution:green,<12} {i.note:dim}"
-        )
-        return tput_format(fmt, i=self)
+        out = f"{Fore.YELLOW}{self.code:<3}{Fore.RESET}  "
+        if self.is_audio():
+            out += f"{Fore.MAGENTA}{self.extension:<6}{Fore.RESET}"
+        else:
+            out += f"{Fore.MAGENTA}{self.extension:>4}{Fore.RESET}/{Fore.GREEN}{self.resolution:<12}{Fore.RESET}"
+        out += f"{Style.DIM}{self.note}{Style.RESET_ALL}"
+        return out
 
     @property
     def resolution_tuple(self):
@@ -125,21 +127,15 @@ if __name__ == "__main__":
         ]
 
         if len(selected_formats) == 0:
-            print(Style.RED.apply("No format selected"))
+            print(f"{Fore.RED}No format selected{Fore.RESET}")
             exit(3)
         download_cmd = (
             ["youtube-dl", "-f", "+".join(map(str, selected_formats))] + uargs + [url]
         )
-        tput_print(
-            "{msg:bold}\n  $ {cmd}\n",
-            msg="Download video using custom formats:",
-            cmd=" ".join(map(shlex.quote, download_cmd)),
-        )
+        print(f"{Style.BRIGHT}Download video using custom formats:{Style.RESET_ALL}")
+        print(f"  $ {' '.join(map(shlex.quote, download_cmd))}")
         subprocess.run(download_cmd, check=True)
     else:
-        tput_print(
-            "{error:red}\n  $ {cmd}",
-            error="Cannot retrieve formats using command:",
-            cmd=" ".join(map(shlex.quote, listformats_cmd)),
-        )
+        print(f"{Fore.RED}Cannot retrieve formats using command:{Fore.RESET}")
+        print(f"  $ {' '.join(map(shlex.quote, listformats_cmd))}")
         exit(3)
