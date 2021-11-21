@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eu
 
+YTDL=${YTDL:-youtube-dl}
+
 display_usage() {
 	echo "$0 [--after|-A 20201212] [--last|-l] folder [folder...]"
 	echo "  folder should contain a .url file containing one or more youtube url"
@@ -40,7 +42,7 @@ for FOLDER in "$@"; do
 	if test -d "$FOLDER" -a -f "$FOLDER/.url"; then
 		grep -E "^https://" "$FOLDER/.url" | while read -r YOUTUBE_URL; do 
 			echo "Synchronize $YOUTUBE_URL --> $FOLDER"
-			youtube-dl "${YTDL_ARGS[@]}" -o "$FOLDER/%(upload_date)s %(title)s.%(ext)s" "$YOUTUBE_URL"
+			$YTDL "${YTDL_ARGS[@]}" -o "$FOLDER/%(upload_date)s %(title)s.%(ext)s" "$YOUTUBE_URL"
 		done
 	fi
 done
