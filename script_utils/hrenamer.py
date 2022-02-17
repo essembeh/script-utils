@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import shutil
 import sys
 from argparse import ONE_OR_MORE, ArgumentParser, ArgumentTypeError
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -220,15 +220,15 @@ def main():
 
     if count_renamed:
         print(
-            f"  {ICON_OK} {count_renamed} file{plural(count_renamed)} {'would be ' if args.dryrun else ''}renamed",
+            f"    {ICON_DRYRUN if args.dryrun else ICON_OK} {count_renamed} file{plural(count_renamed)} {'would be ' if args.dryrun else ''}renamed",
         )
     if count_already_named:
         print(
-            f"  {ICON_OK} {count_already_named} file{plural(count_already_named)} already named",
+            f"    {ICON_OK} {count_already_named} file{plural(count_already_named)} already named",
         )
     if count_error:
         print(
-            f"  {ICON_ERROR} {count_error} error{plural(count_error)}",
+            f"    {ICON_ERROR} {count_error} error{plural(count_error)}",
         )
 
 
