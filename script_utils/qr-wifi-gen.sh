@@ -30,3 +30,4 @@ test -z "$OUTPUT" && OUTPUT=$(mktemp --suffix=".png")
 
 qrencode "$STRING" -s 16 -o "$OUTPUT"
 echo "QRcode generated: $OUTPUT"
+xdg-open "$OUTPUT"
