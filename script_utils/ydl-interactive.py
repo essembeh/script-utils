@@ -91,11 +91,14 @@ def user_selection(question, formats):
 
 if __name__ == "__main__":
     parser = ArgumentParser("youtube-dl-interactive")
+    parser.add_argument(
+        "-b", "--binary", default="yt-dlp", help="youtube-dl binary (default yt-dlp)"
+    )
     parser.add_argument("url", nargs=1, help="URL to download")
     args, uargs = parser.parse_known_args()
 
     url = args.url[0]
-    listformats_cmd = ["youtube-dl", "--list-formats", url]
+    listformats_cmd = [args.binary, "--list-formats", url]
     listformats_process = subprocess.run(
         listformats_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
     )
@@ -130,7 +133,7 @@ if __name__ == "__main__":
             print(f"{Fore.RED}No format selected{Fore.RESET}")
             exit(3)
         download_cmd = (
-            ["youtube-dl", "-f", "+".join(map(str, selected_formats))] + uargs + [url]
+            [args.binary, "-f", "+".join(map(str, selected_formats))] + uargs + [url]
         )
         print(f"{Style.BRIGHT}Download video using custom formats:{Style.RESET_ALL}")
         print(f"  $ {' '.join(map(shlex.quote, download_cmd))}")
