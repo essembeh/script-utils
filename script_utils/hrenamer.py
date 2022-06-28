@@ -6,7 +6,7 @@ import sys
 from argparse import ONE_OR_MORE, ArgumentParser, ArgumentTypeError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 
 from colorama import Fore, Style
 
@@ -69,9 +69,9 @@ def compute_hash(hfunc: Callable, file: Path):
 def compute_filename(
     fingerprint: str,
     length: int = 0,
-    prefix: str = None,
-    suffix: str = None,
-    extension: str = None,
+    prefix: Optional[str] = None,
+    suffix: Optional[str] = None,
+    extension: Optional[str] = None,
 ):
     return (
         (prefix or "")
