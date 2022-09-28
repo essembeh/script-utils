@@ -19,7 +19,6 @@ ICON_HINT = "💡"
 ICON_UNKNOWN = "🚨"
 ICON_DRYRUN = "🙈"
 
-DATE_PATTERN = r"^(2[0-9]{3}):([0-9]{2}):([0-9]{2}) "
 EXIF_KEYS_BY_PREFIX = {
     "image/": [
         "Composite:SubSecDateTimeOriginal",
@@ -71,8 +70,8 @@ def parse_date(text: str) -> datetime:
     """
     exiftool date are not datetime compatible
     """
-    correct = re.sub(DATE_PATTERN, r"\1-\2-\3 ", text, count=1)
-    return datetime.fromisoformat(correct)
+    assert len(text) >= 19, f"Invalid date {text}"
+    return datetime.fromisoformat(text.replace(":", "-", 2)[0:19])
 
 
 def get_create_date(file: Path):
